@@ -46,12 +46,15 @@ img.kuva{width:min(70vw,220px);height:auto;border-radius:12px;border:1.5px solid
   <button id="reset">Nollaa</button>
 </div>
 
+<p>Luku säilyy tällä laitteella, vaikka sulkisit sivun.</p>
+
 <div class="kuvat">
     <img class="kuva" src="kuva.png" alt="Sivulle lisätty kuva">
     <img class="kuva" src="cat.png" alt="Kissa">
 </div>
-<p>Luku säilyy tällä laitteella, vaikka sulkisit sivun.</p>
-<p>Teksti xdd</p>
+
+
+<a href="kissat.html">Siirry kissojen sivulle</a>
 
 <img class="kuva"  src="koira.png" alt="Kuva koirasta">
   
@@ -62,8 +65,10 @@ img.kuva{width:min(70vw,220px);height:auto;border-radius:12px;border:1.5px solid
   function show(){el.textContent=n;try{localStorage.setItem('painallukset',String(n))}catch(e){}}
   document.getElementById('press').addEventListener('click',function(){n++;show()});
   document.getElementById('undo').addEventListener('click',function(){if(n>0){n--;show()}});
-  document.getElementById('reset').addEventListener('click',function(){if(n===-1||confirm('Nollataanko laskuri?')){n=-1;show()}});
-  show();
+  document.getElementById('reset').addEventListener('click', function() {
+    n = 0;
+    show();
+});
 })();
 </script>
 </body>
