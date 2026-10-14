@@ -11,7 +11,7 @@ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:en
 :root[data-theme="dark"]{--bg:#15161a;--ink:#eceae5;--muted:#9a978f;--btn:#6b8cff;--btn-ink:#0d0f14;--line:#2c2e35}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
-body{background:var(--bg);color:var(--ink);font-family:"Trebuchet MS",system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:20px;text-align:center}
+body{background:var(--bg);color:var(--ink);font-family:"Trebuchet MS",system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:28px;padding:20px;text-align:center}
 #count{font-size:clamp(5rem,28vw,10rem);font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
 #press{width:min(78vw,260px);aspect-ratio:1;border-radius:50%;border:0;background:var(--btn);color:var(--btn-ink);font:inherit;font-size:1.5rem;font-weight:700;cursor:pointer;box-shadow:0 8px 0 rgba(0,0,0,.25);transition:transform .08s,box-shadow .08s;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 #press:active{transform:translateY(6px);box-shadow:0 2px 0 rgba(0,0,0,.25)}
@@ -23,27 +23,46 @@ p{margin:0;color:var(--muted);font-size:.95rem}
 .google:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
 img.kuva{width:min(70vw,220px);height:auto;border-radius:12px;border:1.5px solid var(--line)}
 @media (prefers-reduced-motion:reduce){#press{transition:none}}
+
+.kuvat {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+}
+
+.kuva {
+    width: min(50vw, 220px);
+    height: auto;
+}
 </style>
 </head>
 <body>
+<h1>koirakissa.xyz</h1>
 <div id="count" aria-live="polite">0</div>
 <button id="press">Paina tästä</button>
 <div class="small">
   <button id="undo">Peru</button>
   <button id="reset">Nollaa</button>
 </div>
-<a class="google" href="https://www.google.com" target="_blank" rel="noopener">Avaa Google</a>
-<img class="kuva" src="kuva.png" alt="Sivulle lisätty kuva">
+
+<div class="kuvat">
+    <img class="kuva" src="kuva.png" alt="Sivulle lisätty kuva">
+    <img class="kuva" src="cat.png" alt="Kissa">
+</div>
 <p>Luku säilyy tällä laitteella, vaikka sulkisit sivun.</p>
+<p>Teksti xdd</p>
+
+<img class="kuva"  src="koira.png" alt="Kuva koirasta">
   
 <script>
 (function(){
-  var n=0, el=document.getElementById('count');
+  var n=1, el=document.getElementById('count');
   try{var s=localStorage.getItem('painallukset');if(s!==null&&!isNaN(+s))n=+s}catch(e){}
   function show(){el.textContent=n;try{localStorage.setItem('painallukset',String(n))}catch(e){}}
   document.getElementById('press').addEventListener('click',function(){n++;show()});
   document.getElementById('undo').addEventListener('click',function(){if(n>0){n--;show()}});
-  document.getElementById('reset').addEventListener('click',function(){if(n===0||confirm('Nollataanko laskuri?')){n=0;show()}});
+  document.getElementById('reset').addEventListener('click',function(){if(n===-1||confirm('Nollataanko laskuri?')){n=-1;show()}});
   show();
 })();
 </script>
