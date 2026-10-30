@@ -2,15 +2,26 @@
 const express = require("express");
 const cors = require("cors");
 const Stripe = require("stripe");
-
 const { Resend } = require("resend");
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+const SENDER = "Kissakoira <tilaukset@kissakoira.xyz>";
+
+// Muuntaa asiakkaan tiedot turvalliseen HTML-muotoon
+function escapeHtml(value = "") {
+    return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
+}
 
 // CORS
 app.use(cors({
@@ -20,8 +31,8 @@ app.use(cors({
     ]
 }));
 
-// Webhook pitää määritellä ENNEN express.json()-middlewarea!
-
+// WEBHOOK
+// Tämä pitää olla ennen express.json()-middlewarea!
 app.post(
     "/api/webhook",
     express.raw({ type: "application/json" }),
@@ -41,69 +52,228 @@ app.post(
             return res.status(400).send("Webhook error");
         }
 
-        if (event.type === "checkout.session.completed") {
-            const session = event.data.object;
+        if (event.type !== "checkout.session.completed") {
+            return res.json({ received: true });
+        }
 
-            if (session.payment_status === "paid") {
-                const shipping =
-                    session.collected_information?.shipping_details;
+        const session = event.data.object;
 
-                const address = shipping?.address || {};
-                const customer = session.customer_details || {};
+        // Lähetetään viestit vain maksetuista tilauksista
+        if (session.payment_status !== "paid") {
+            return res.json({ received: true });
+        }
 
-                const amount = (
-                    (session.amount_total || 0) / 100
-                ).toFixed(2);
+        const shipping =
+            session.collected_information?.shipping_details ||
+            session.shipping_details;
 
-                const orderInfo = `
-                    <h2>Uusi tilaus! 🎉</h2>
-                    <p><strong>Tilaus:</strong> ${session.id}</p>
-                    <p><strong>Summa:</strong> ${amount} €</p>
+        const address = shipping?.address || {};
+        const customer = session.customer_details || {};
 
-                    <h3>Asiakkaan tiedot</h3>
-                    <p><strong>Nimi:</strong> ${shipping?.name || customer.name || "Ei saatavilla"}</p>
-                    <p><strong>Sähköposti:</strong> ${customer.email || "Ei saatavilla"}</p>
-                    <p><strong>Puhelin:</strong> ${customer.phone || "Ei saatavilla"}</p>
+        const name = escapeHtml(
+            shipping?.name || customer.name || "Asiakas"
+        );
 
-                    <h3>Toimitusosoite</h3>
-                    <p>
-                        ${address.line1 || ""}<br>
-                        ${address.line2 || ""}<br>
-                        ${address.postal_code || ""} ${address.city || ""}<br>
-                        ${address.country || ""}
-                    </p>
-                `;
+        const email = customer.email || "";
+        const phone = escapeHtml(
+            customer.phone || "Ei ilmoitettu"
+        );
 
-                console.log("MAKSU ONNISTUI!");
-                console.log("Tilaustunnus:", session.id);
+        const street = escapeHtml(address.line1 || "");
+        const apartment = escapeHtml(address.line2 || "");
+        const postal = escapeHtml(address.postal_code || "");
+        const city = escapeHtml(address.city || "");
+        const country = escapeHtml(address.country || "");
 
-                try {
-                    const { data, error } = await resend.emails.send({
-                        from: "Kissakoira <onboarding@resend.dev>",
-                        to: [process.env.NOTIFICATION_EMAIL],
-                        subject: "Uusi tilaus Kissakoira-kaupasta!",
-                        html: orderInfo
-                    });
+        const amount = (
+            (session.amount_total || 0) / 100
+        ).toFixed(2);
 
-                    if (error) {
-                        console.error("Sähköpostivirhe:", error);
-                    } else {
-                        console.log("Tilausilmoitus lähetetty:", data.id);
+        const orderId = session.id;
+
+        console.log("MAKSU ONNISTUI!");
+        console.log("Tilaustunnus:", orderId);
+        console.log("Sähköposti:", email);
+
+        // Yhteiset toimitustiedot
+        const addressHtml = `
+            ${street}<br>
+            ${apartment ? apartment + "<br>" : ""}
+            ${postal} ${city}<br>
+            ${country}
+        `;
+
+        // 1. SÄHKÖPOSTI YRITTÄJÄLLE
+        const adminHtml = `
+            <h2>Uusi tilaus! 🎉</h2>
+
+            <p><strong>Tilausnumero:</strong> ${orderId}</p>
+            <p><strong>Maksettu summa:</strong> ${amount} €</p>
+
+            <h3>Asiakkaan tiedot</h3>
+            <p><strong>Nimi:</strong> ${name}</p>
+            <p><strong>Sähköposti:</strong>
+                ${escapeHtml(email || "Ei saatavilla")}
+            </p>
+            <p><strong>Puhelin:</strong> ${phone}</p>
+
+            <h3>Toimitusosoite</h3>
+            <p>${addressHtml}</p>
+
+            <hr>
+            <p>Uusi tilaus Kissakoira-verkkokaupasta.</p>
+        `;
+
+        try {
+            const { data, error } = await resend.emails.send(
+                {
+                    from: SENDER,
+                    to: [process.env.NOTIFICATION_EMAIL],
+                    subject: "Uusi tilaus Kissakoira-kaupasta!",
+                    html: adminHtml
+                },
+                {
+                    idempotencyKey: `admin-order-${orderId}`
+                }
+            );
+
+            if (error) {
+                console.error("Admin email error:", error);
+            } else {
+                console.log(
+                    "Tilausilmoitus lähetetty:",
+                    data.id
+                );
+            }
+        } catch (err) {
+            console.error(
+                "Admin email error:",
+                err.message
+            );
+        }
+
+        // 2. SÄHKÖPOSTI ASIAKKAALLE
+        if (email) {
+            const customerHtml = `
+                <div style="
+                    max-width: 600px;
+                    margin: auto;
+                    padding: 30px;
+                    font-family: Arial, sans-serif;
+                    color: #333;
+                    background: #ffffff;
+                ">
+
+                    <div style="text-align: center;">
+                        <h2 style="letter-spacing: 3px;">
+                            KISSAKOIRA
+                        </h2>
+
+                        <div style="
+                            font-size: 55px;
+                            color: #25a64a;
+                            margin: 25px;
+                        ">✓</div>
+
+                        <h1 style="color: #25a64a;">
+                            Kiitos tilauksestasi!
+                        </h1>
+
+                        <p>Hei ${name}! ❤️</p>
+
+                        <p>
+                            Maksusi on vastaanotettu onnistuneesti.
+                            Tilauksesi on tullut meille perille.
+                        </p>
+                    </div>
+
+                    <div style="
+                        background: #f5f5f5;
+                        padding: 20px;
+                        border-radius: 12px;
+                        margin-top: 25px;
+                    ">
+                        <h3>Tilauksen tiedot</h3>
+
+                        <p>
+                            <strong>Tilausnumero:</strong><br>
+                            ${orderId}
+                        </p>
+
+                        <p>
+                            <strong>Maksettu summa:</strong><br>
+                            ${amount} €
+                        </p>
+
+                        <p>
+                            <strong>Maksun tila:</strong><br>
+                            Maksu vastaanotettu ✓
+                        </p>
+                    </div>
+
+                    <div style="margin-top: 25px;">
+                        <h3>Toimitusosoite</h3>
+
+                        <p>
+                            ${name}<br>
+                            ${addressHtml}
+                        </p>
+                    </div>
+
+                    <div style="
+                        text-align: center;
+                        margin-top: 35px;
+                        color: #888;
+                    ">
+                        <p>
+                            Kiitos kun asioit meillä! 🐾
+                        </p>
+
+                        <a href="https://kissakoira.xyz"
+                           style="color: #333;">
+                            kissakoira.xyz
+                        </a>
+                    </div>
+
+                </div>
+            `;
+
+            try {
+                const { data, error } = await resend.emails.send(
+                    {
+                        from: SENDER,
+                        to: [email],
+                        subject: "Kiitos tilauksestasi! ❤️",
+                        html: customerHtml
+                    },
+                    {
+                        idempotencyKey: `customer-order-${orderId}`
                     }
+                );
 
-                } catch (emailError) {
-                    console.error(
-                        "Sähköpostin lähetys epäonnistui:",
-                        emailError.message
+                if (error) {
+                    console.error("Customer email error:", error);
+                } else {
+                    console.log(
+                        "Asiakkaan vahvistus lähetetty:",
+                        data.id
                     );
                 }
+            } catch (err) {
+                console.error(
+                    "Customer email error:",
+                    err.message
+                );
             }
+        } else {
+            console.log(
+                "Asiakkaan sähköpostiosoite puuttuu."
+            );
         }
 
         res.json({ received: true });
     }
 );
-
 
 // Tavallisten pyyntöjen JSON-käsittely
 app.use(express.json());
@@ -180,4 +350,3 @@ app.post("/api/create-checkout-session", async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-
