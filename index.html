@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fi">
 
@@ -160,7 +159,7 @@
     <!-- LASKURI -->
     <script>
         (function () {
-            var n = 1;
+            var n = 0;
             var el = document.getElementById('count');
 
             try {
@@ -178,6 +177,8 @@
                     localStorage.setItem('painallukset', String(n));
                 } catch (e) { }
             }
+
+            show();
 
             document.getElementById('press').addEventListener('click', function () {
                 n++;
@@ -230,6 +231,7 @@
                 id="userInput"
                 placeholder="Kirjoita viesti..."
                 autocomplete="off"
+                maxlength="500"
                 required
             >
 
@@ -243,8 +245,8 @@
     <!-- CHATBOTIN JAVASCRIPT -->
     <script>
 
-        // LISÄÄ TÄHÄN OMA GOOGLE APPS SCRIPT /exec -OSOITE
-        const API_URL = "https://script.google.com/macros/library/d/1nkJu8lrZxzmjZTUp0C5F9Ehq_vOiBUjbzo0tq4vQe5nKcjYLAF7_Ekvb/6";
+        // Google Apps Script -web-sovelluksen /exec-osoite
+        const API_URL = "https://script.google.com/macros/s/AKfycbxh2QWXAdTTKTxlJkK77aMRll15b-YEMNyjsXJvjErBqKfepQ7xxoL3mhTRljMFkBhnNw/exec";
 
 
         const chatButton = document.getElementById("chatButton");
@@ -307,21 +309,17 @@
             const loading = addMessage("Kirjoittaa...", "bot");
 
 
-            // Luodaan yksilöllinen callback
+            // Yksilöllinen callback
             const callbackName =
                 "geminiCallback_" + Date.now() + "_" +
                 Math.floor(Math.random() * 100000);
 
+            const script = document.createElement("script");
+            let timeout;
 
-            // Callback vastaanottaa palvelimen vastauksen
-            window[callbackName] = (data) => {
-
-                if (data.error) {
-                    loading.textContent = "Virhe: " + data.error;
-                } else {
-                    loading.textContent = data.reply || "Tyhjä vastaus.";
-                }
-
+            // Siivous ja kentän vapautus
+            function finish() {
+                clearTimeout(timeout);
                 delete window[callbackName];
 
                 if (script.parentNode) {
@@ -331,13 +329,19 @@
                 userInput.disabled = false;
                 sendButton.disabled = false;
                 userInput.focus();
-
                 messages.scrollTop = messages.scrollHeight;
+            }
+
+            // Callback vastaanottaa palvelimen vastauksen
+            window[callbackName] = (data) => {
+                if (data.error) {
+                    loading.textContent = "Virhe: " + data.error;
+                } else {
+                    loading.textContent = data.reply || "Tyhjä vastaus.";
+                }
+
+                finish();
             };
-
-
-            // Luodaan script-elementti
-            const script = document.createElement("script");
 
             const params = new URLSearchParams({
                 message: message,
@@ -346,21 +350,20 @@
 
             script.src = API_URL + "?" + params.toString();
 
-
             // Virhe yhteydessä
             script.onerror = () => {
-
-                loading.textContent =
-                    "Yhteys palvelimeen epäonnistui.";
-
-                delete window[callbackName];
-                script.remove();
-
-                userInput.disabled = false;
-                sendButton.disabled = false;
-                userInput.focus();
+                loading.textContent = "Yhteys palvelimeen epäonnistui.";
+                finish();
             };
 
+            // Aikakatkaisu, jos vastausta ei tule
+            timeout = setTimeout(() => {
+                if (window[callbackName]) {
+                    loading.textContent =
+                        "Vastaus kesti liian kauan. Yritä uudelleen.";
+                    finish();
+                }
+            }, 30000);
 
             // Lähetetään pyyntö
             document.body.appendChild(script);
