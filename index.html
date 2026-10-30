@@ -155,14 +155,19 @@
 
     <script>
         (function () {
-            var n = 1, el = document.getElementById('count');
+            var n = 1;
+            var el = document.getElementById('count');
+
             try {
                 var s = localStorage.getItem('painallukset');
-                if (s !== null && !isNaN(+s)) n = +s;
+                if (s !== null && !isNaN(+s)) {
+                    n = +s;
+                }
             } catch (e) { }
 
             function show() {
                 el.textContent = n;
+
                 try {
                     localStorage.setItem('painallukset', String(n));
                 } catch (e) { }
@@ -218,8 +223,9 @@
     </div>
 
     <script>
-        // LISÄÄ TÄHÄN OMA GOOGLE APPS SCRIPT URL
-        const API_URL ="https://script.google.com/macros/s/AKfycbzbahcGLZ5js4M0VpTGvUk8uYrt5ow6dhqDYcusqBetDWB8GYKK9GwwCHHNjsbdgL2eBw/exec";
+        // LISÄÄ TÄHÄN OMA KOKO GOOGLE APPS SCRIPT URL
+        const API_URL = "https://script.google.com/macros/s/AKfycbzbahcGLZ5js4M0VpTGvUk8uYrt5ow6dhqDYcusqBetDWB8GYKK9GwwCHHNjsbdgL2eBw/exec";
+
         const chatButton = document.getElementById("chatButton");
         const chatWindow = document.getElementById("chatWindow");
         const closeChat = document.getElementById("closeChat");
@@ -255,7 +261,10 @@
             event.preventDefault();
 
             const message = userInput.value.trim();
-            if (!message) return;
+
+            if (!message) {
+                return;
+            }
 
             addMessage(message, "user");
 
@@ -268,21 +277,32 @@
             try {
                 const response = await fetch(API_URL, {
                     method: "POST",
-                    body: JSON.stringify({ message: message })
+                    body: JSON.stringify({
+                        message: message
+                    })
                 });
 
-                const data = await response.json();
+                // Luetaan vastaus tekstinä JSONin sijaan.
+                const responseText = await response.text();
+
+                // Tulostetaan tiedot selaimen Consoleen.
+                console.log("HTTP-status:", response.status);
+                console.log("Palvelimen vastaus:", responseText);
+
+                // Yritetään muuttaa vastaus JSON-muotoon.
+                const data = JSON.parse(responseText);
 
                 if (data.error) {
                     throw new Error(data.error);
                 }
 
-                loading.textContent = data.reply;
+                loading.textContent = data.reply || "Tyhjä vastaus palvelimelta.";
 
             } catch (error) {
-                console.error(error);
+                console.error("Chatbot-virhe:", error);
+
                 loading.textContent =
-                    "Viestin lähettäminen epäonnistui. Yritä uudelleen.";
+                    "Virhe: " + error.message;
             }
 
             userInput.disabled = false;
@@ -292,4 +312,5 @@
     </script>
 
 </body>
+
 </html>
