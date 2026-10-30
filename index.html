@@ -1,14 +1,208 @@
+
 <!DOCTYPE html>
 <html lang="fi">
 
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Koira Kissa nettisivu</title>
-    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
+
+    <title>Kissakoira – Vaatteita asenteella</title>
+
+    <meta name="description"
+          content="Tutustu Kissakoiran ensimmäiseen paitamallistoon.">
 
     <style>
-        /* Chat-kupla, */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            color: #222;
+            background: #fafafa;
+        }
+
+        /* NAVIGAATIO */
+
+        .navbar {
+            background: #171717;
+            color: white;
+            padding: 20px 7%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 23px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: white;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 25px;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .nav-links a:hover {
+            color: #aaa;
+        }
+
+        /* ETUSIVUN ESITTELY */
+
+        .hero {
+            background: #222;
+            color: white;
+            text-align: center;
+            padding: 95px 20px;
+        }
+
+        .hero h1 {
+            font-size: clamp(35px, 6vw, 60px);
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+        }
+
+        .hero p {
+            color: #ccc;
+            font-size: 17px;
+            margin-bottom: 30px;
+        }
+
+        .hero a {
+            display: inline-block;
+            background: white;
+            color: #222;
+            padding: 14px 28px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .hero a:hover {
+            background: #ddd;
+            transform: translateY(-2px);
+        }
+
+        /* TUOTTEET */
+
+        .shop {
+            max-width: 1200px;
+            margin: auto;
+            padding: 70px 25px;
+        }
+
+        .shop h2 {
+            text-align: center;
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .shop-intro {
+            text-align: center;
+            color: #777;
+            margin-bottom: 40px;
+        }
+
+        .products {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 28px;
+        }
+
+        .product {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 3px 15px #0000000d;
+            transition: 0.2s;
+        }
+
+        .product:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px #00000018;
+        }
+
+        .product img {
+            width: 100%;
+            aspect-ratio: 4 / 5;
+            object-fit: cover;
+            display: block;
+            background: #eee;
+        }
+
+        .product-info {
+            padding: 22px;
+        }
+
+        .product-info h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .product-info p {
+            color: #777;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .price {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 18px;
+        }
+
+        .buy-button {
+            display: block;
+            width: 100%;
+            border: none;
+            background: #222;
+            color: white;
+            padding: 14px;
+            border-radius: 5px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .buy-button:hover {
+            background: #444;
+        }
+
+        .buy-button:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        /* FOOTER */
+
+        footer {
+            background: #171717;
+            color: #aaa;
+            text-align: center;
+            padding: 30px 15px;
+            font-size: 13px;
+        }
+
+        footer a {
+            color: white;
+        }
+
+        /* CHAT */
+
         .chat-button {
             position: fixed;
             right: 25px;
@@ -25,7 +219,6 @@
             z-index: 1000;
         }
 
-        /* Chat-ikkuna */
         .chat-window {
             display: none;
             position: fixed;
@@ -118,96 +311,168 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
+
+        /* MOBIILI */
+
+        @media (max-width: 700px) {
+            .navbar {
+                padding: 18px;
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .nav-links {
+                gap: 18px;
+            }
+
+            .products {
+                grid-template-columns: 1fr;
+                max-width: 430px;
+                margin: auto;
+            }
+
+            .hero {
+                padding: 70px 20px;
+            }
+
+            .shop {
+                padding: 50px 18px;
+            }
+        }
     </style>
 </head>
 
 <body>
 
+    <!-- NAVIGAATIO -->
+
     <nav class="navbar">
-        <a href="index.html">Etusivu</a>
-        <a href="koirat.html">Koirat</a>
-        <a href="kissat.html">Kissat</a>
-        <a href="2048.html">Peli</a>
+        <a href="index.html" class="logo">KISSAKOIRA</a>
+
+        <div class="nav-links">
+            <a href="index.html">Etusivu</a>
+            <a href="#kauppa">Kauppa</a>
+        </div>
     </nav>
 
-    <h1>kissakoira.xyz</h1>
 
-    <div id="count" aria-live="polite">0</div>
+    <!-- ETUSIVUN ESITTELY -->
 
-    <button id="press">Paina tästä</button>
+    <section class="hero">
+        <h1>PAITOJA ASENTEELLA.</h1>
 
-    <div class="small">
-        <button id="undo">Peru</button>
-        <button id="reset">Nollaa</button>
-    </div>
+        <p>
+            Kissakoiran ensimmäinen mallisto on täällä.
+            Tutustu testipaitoihin!
+        </p>
 
-    <p>Luku säilyy tällä laitteella, vaikka sulkisit sivun.</p>
+        <a href="#kauppa">Tutustu tuotteisiin</a>
+    </section>
 
-    <div class="kuvat">
-        <img class="kuva" src="photos1/kuva.png" alt="tonni">
-        <img class="kuva" src="photos1/cat.png" alt="Kissa">
-    </div>
 
-    <img class="kuva" src="photos1/koira.png" alt="Kuva koirasta">
+    <!-- TUOTTEET -->
 
-    <span class="nav-counter">
-        <img
-            src="https://hits.sh/kissakoira.xyz/index.html.svg?label=Vierailija%20m%C3%A4%C3%A4r%C3%A4&color=1e8dcf"
-            alt="Kävijämäärä">
-    </span>
+    <main class="shop" id="kauppa">
 
-    <!-- LASKURI -->
-    <script>
-        (function () {
-            var n = 0;
-            var el = document.getElementById('count');
+        <h2>Ensimmäinen mallisto</h2>
 
-            try {
-                var s = localStorage.getItem('painallukset');
+        <p class="shop-intro">
+            Kolme paitaa. Kolme tyyliä. Mikä on suosikkisi?
+        </p>
 
-                if (s !== null && !isNaN(+s)) {
-                    n = +s;
-                }
-            } catch (e) { }
+        <div class="products">
 
-            function show() {
-                el.textContent = n;
+            <!-- PAITA 1 -->
 
-                try {
-                    localStorage.setItem('painallukset', String(n));
-                } catch (e) { }
-            }
+            <article class="product">
+                <img src="photos1/paita1.jpg"
+                     alt="Kissakoiran testipaita 1">
 
-            show();
+                <div class="product-info">
+                    <h3>Testipaita 01</h3>
 
-            document.getElementById('press').addEventListener('click', function () {
-                n++;
-                show();
-            });
+                    <p>
+                        Kissakoiran ensimmäinen testituote.
+                    </p>
 
-            document.getElementById('undo').addEventListener('click', function () {
-                if (n > 0) {
-                    n--;
-                    show();
-                }
-            });
+                    <div class="price">19,90 €</div>
 
-            document.getElementById('reset').addEventListener('click', function () {
-                n = 0;
-                show();
-            });
-        })();
-    </script>
+                    <button class="buy-button"
+                            onclick="buyProduct('paita1', this)">
+                        Osta nyt
+                    </button>
+                </div>
+            </article>
+
+
+            <!-- PAITA 2 -->
+
+            <article class="product">
+                <img src="photos1/paita2.jpg"
+                     alt="Kissakoiran testipaita 2">
+
+                <div class="product-info">
+                    <h3>Testipaita 02</h3>
+
+                    <p>
+                        Toinen erikoismalli testimallistosta.
+                    </p>
+
+                    <div class="price">19,90 €</div>
+
+                    <button class="buy-button"
+                            onclick="buyProduct('paita2', this)">
+                        Osta nyt
+                    </button>
+                </div>
+            </article>
+
+
+            <!-- PAITA 3 -->
+
+            <article class="product">
+                <img src="photos1/paita3.jpg"
+                     alt="Kissakoiran testipaita 3">
+
+                <div class="product-info">
+                    <h3>Testipaita 03</h3>
+
+                    <p>
+                        Kolmas malli Kissakoiran mallistosta.
+                    </p>
+
+                    <div class="price">24,90 €</div>
+
+                    <button class="buy-button"
+                            onclick="buyProduct('paita3', this)">
+                        Osta nyt
+                    </button>
+                </div>
+            </article>
+
+        </div>
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer>
+        <p>© 2026 Kissakoira</p>
+        <p>Kiitos kun vierailit kaupassamme! 🐾</p>
+    </footer>
+
 
     <!-- CHAT-KUPLA -->
-    <button
-        class="chat-button"
-        id="chatButton"
-        aria-label="Avaa chatbot">
+
+    <button class="chat-button"
+            id="chatButton"
+            aria-label="Avaa chatbot">
         🐱
     </button>
 
+
     <!-- CHAT-IKKUNA -->
+
     <div class="chat-window" id="chatWindow">
 
         <div class="chat-header">
@@ -220,7 +485,8 @@
 
         <div class="messages" id="messages">
             <div class="message bot">
-                Moi! Olen Kissakoira AI. Miten voin auttaa? 😺
+                Moi! Olen Kissakoira AI.
+                Miten voin auttaa? 😺
             </div>
         </div>
 
@@ -242,12 +508,54 @@
         </form>
     </div>
 
-    <!-- CHATBOTIN JAVASCRIPT -->
+
+    <!-- OSTAMINEN -->
+
     <script>
+        const API_BASE = "https://kissa-dhdn.onrender.com";
 
-        // Google Apps Script -web-sovelluksen /exec-osoite
-        const API_URL = "https://script.google.com/macros/s/AKfycbxh2QWXAdTTKTxlJkK77aMRll15b-YEMNyjsXJvjErBqKfepQ7xxoL3mhTRljMFkBhnNw/exec";
+        async function buyProduct(productId, button) {
+            button.disabled = true;
+            button.textContent = "Siirrytään maksamaan...";
 
+            try {
+                const response = await fetch(
+                    API_BASE + "/api/create-checkout-session",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            productId: productId
+                        })
+                    }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok || !data.url) {
+                    throw new Error(
+                        data.error || "Maksun luominen epäonnistui."
+                    );
+                }
+
+                window.location.href = data.url;
+
+            } catch (error) {
+                alert(error.message);
+                button.disabled = false;
+                button.textContent = "Osta nyt";
+            }
+        }
+    </script>
+
+
+    <!-- CHATBOT -->
+
+    <script>
+        const API_URL =
+            "https://script.google.com/macros/s/AKfycbxh2QWXAdTTKtxlJkK77aMRll15b-YEMNyjsXJvjErBqKfepQ7xxoL3mhTRljMFkBhnNw/exec";
 
         const chatButton = document.getElementById("chatButton");
         const chatWindow = document.getElementById("chatWindow");
@@ -258,23 +566,17 @@
         const sendButton = document.getElementById("sendButton");
         const messages = document.getElementById("messages");
 
-
-        // CHATIN AVAAMINEN
         chatButton.addEventListener("click", () => {
             chatWindow.style.display = "flex";
             chatButton.style.display = "none";
             userInput.focus();
         });
 
-
-        // CHATIN SULKEMINEN
         closeChat.addEventListener("click", () => {
             chatWindow.style.display = "none";
             chatButton.style.display = "block";
         });
 
-
-        // VIESTIN LISÄÄMINEN
         function addMessage(text, sender) {
             const div = document.createElement("div");
 
@@ -287,19 +589,13 @@
             return div;
         }
 
-
-        // VIESTIN LÄHETTÄMINEN
         chatForm.addEventListener("submit", (event) => {
-
             event.preventDefault();
 
             const message = userInput.value.trim();
 
-            if (!message) {
-                return;
-            }
+            if (!message) return;
 
-            // Näytetään käyttäjän viesti
             addMessage(message, "user");
 
             userInput.value = "";
@@ -308,8 +604,6 @@
 
             const loading = addMessage("Kirjoittaa...", "bot");
 
-
-            // Yksilöllinen callback
             const callbackName =
                 "geminiCallback_" + Date.now() + "_" +
                 Math.floor(Math.random() * 100000);
@@ -317,7 +611,6 @@
             const script = document.createElement("script");
             let timeout;
 
-            // Siivous ja kentän vapautus
             function finish() {
                 clearTimeout(timeout);
                 delete window[callbackName];
@@ -332,7 +625,6 @@
                 messages.scrollTop = messages.scrollHeight;
             }
 
-            // Callback vastaanottaa palvelimen vastauksen
             window[callbackName] = (data) => {
                 if (data.error) {
                     loading.textContent = "Virhe: " + data.error;
@@ -350,13 +642,12 @@
 
             script.src = API_URL + "?" + params.toString();
 
-            // Virhe yhteydessä
             script.onerror = () => {
-                loading.textContent = "Yhteys palvelimeen epäonnistui.";
+                loading.textContent =
+                    "Yhteys palvelimeen epäonnistui.";
                 finish();
             };
 
-            // Aikakatkaisu, jos vastausta ei tule
             timeout = setTimeout(() => {
                 if (window[callbackName]) {
                     loading.textContent =
@@ -365,11 +656,8 @@
                 }
             }, 50000);
 
-            // Lähetetään pyyntö
             document.body.appendChild(script);
-
         });
-
     </script>
 
 </body>
