@@ -44,10 +44,16 @@ app.post(
             console.log("Tilaustunnus:", session.id);
             console.log("Sähköposti:", session.customer_details?.email);
             console.log("Puhelin:", session.customer_details?.phone);
-            console.log(
-                "Toimitusosoite:",
-                session.shipping_details?.address
-            );
+            const shipping =
+                session.collected_information?.shipping_details;
+
+            console.log("Toimituksen nimi:", shipping?.name);
+            console.log("Toimitusosoite:", shipping?.address);
+            console.log("Katuosoite:", shipping?.address?.line1);
+            console.log("Asunto:", shipping?.address?.line2);
+            console.log("Postinumero:", shipping?.address?.postal_code);
+            console.log("Kaupunki:", shipping?.address?.city);
+            console.log("Maa:", shipping?.address?.country);
 
             // Lisätään sähköposti-ilmoitus myöhemmin.
         }
@@ -108,7 +114,7 @@ app.post("/api/create-checkout-session", async (req, res) => {
             ],
 
             success_url:
-                "https://kissakoira.xyz/?payment=success",
+                "https://kissakoira.xyz/maksu-onnistui.html",
 
             cancel_url:
                 "https://kissakoira.xyz/?payment=cancel"
