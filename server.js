@@ -12,7 +12,24 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 const SENDER = "Kissakoira <tilaukset@kissakoira.xyz>";
 
-// Muuntaa asiakkaan tiedot turvalliseen HTML-muotoon
+// Tuotteet ja hinnat määritellään backendissä.
+// Älä luota selaimesta tulevaan hintaan.
+const PRODUCTS = {
+    paita1: {
+        name: "Testipaita 01",
+        price: 1990
+    },
+    paita2: {
+        name: "Testipaita 02",
+        price: 1990
+    },
+    paita3: {
+        name: "Testipaita 03",
+        price: 2490
+    }
+};
+
+// HTML-erikoismerkkien suojaus
 function escapeHtml(value = "") {
     return String(value).replace(/[&<>"']/g, char => ({
         "&": "&amp;",
@@ -31,8 +48,8 @@ app.use(cors({
     ]
 }));
 
-// WEBHOOK
-// Tämä pitää olla ennen express.json()-middlewarea!
+// STRIPE WEBHOOK
+// Tämä täytyy olla ennen express.json()-käsittelyä.
 app.post(
     "/api/webhook",
     express.raw({ type: "application/json" }),
@@ -58,10 +75,12 @@ app.post(
 
         const session = event.data.object;
 
-        // Lähetetään viestit vain maksetuista tilauksista
+        // Käsitellään vain onnistuneet maksut.
         if (session.payment_status !== "paid") {
             return res.json({ received: true });
         }
+
+        const product = PRODUCTS[session.metadata?.productId];
 
         const shipping =
             session.collected_information?.shipping_details ||
@@ -75,6 +94,7 @@ app.post(
         );
 
         const email = customer.email || "";
+
         const phone = escapeHtml(
             customer.phone || "Ei ilmoitettu"
         );
@@ -91,11 +111,10 @@ app.post(
 
         const orderId = session.id;
 
-        console.log("MAKSU ONNISTUI!");
-        console.log("Tilaustunnus:", orderId);
-        console.log("Sähköposti:", email);
+        const productName = escapeHtml(
+            product?.name || "Tuntematon tuote"
+        );
 
-        // Yhteiset toimitustiedot
         const addressHtml = `
             ${street}<br>
             ${apartment ? apartment + "<br>" : ""}
@@ -103,14 +122,22 @@ app.post(
             ${country}
         `;
 
-        // 1. SÄHKÖPOSTI YRITTÄJÄLLE
+        console.log("MAKSU ONNISTUI!");
+        console.log("Tilaustunnus:", orderId);
+        console.log("Tuote:", productName);
+        console.log("Sähköposti:", email);
+        console.log("Toimitusosoite:", address);
+
+        // ILMOITUS YLLÄPITÄJÄLLE
         const adminHtml = `
             <h2>Uusi tilaus! 🎉</h2>
 
-            <p><strong>Tilausnumero:</strong> ${orderId}</p>
+            <p><strong>Tilausnumero:</strong> ${escapeHtml(orderId)}</p>
+            <p><strong>Tuote:</strong> ${productName}</p>
             <p><strong>Maksettu summa:</strong> ${amount} €</p>
 
             <h3>Asiakkaan tiedot</h3>
+
             <p><strong>Nimi:</strong> ${name}</p>
             <p><strong>Sähköposti:</strong>
                 ${escapeHtml(email || "Ei saatavilla")}
@@ -119,9 +146,6 @@ app.post(
 
             <h3>Toimitusosoite</h3>
             <p>${addressHtml}</p>
-
-            <hr>
-            <p>Uusi tilaus Kissakoira-verkkokaupasta.</p>
         `;
 
         try {
@@ -140,19 +164,13 @@ app.post(
             if (error) {
                 console.error("Admin email error:", error);
             } else {
-                console.log(
-                    "Tilausilmoitus lähetetty:",
-                    data.id
-                );
+                console.log("Ylläpitäjän sähköposti lähetetty:", data.id);
             }
         } catch (err) {
-            console.error(
-                "Admin email error:",
-                err.message
-            );
+            console.error("Admin email error:", err.message);
         }
 
-        // 2. SÄHKÖPOSTI ASIAKKAALLE
+        // VAHVISTUS ASIAKKAALLE
         if (email) {
             const customerHtml = `
                 <div style="
@@ -197,7 +215,12 @@ app.post(
 
                         <p>
                             <strong>Tilausnumero:</strong><br>
-                            ${orderId}
+                            ${escapeHtml(orderId)}
+                        </p>
+
+                        <p>
+                            <strong>Tuote:</strong><br>
+                            ${productName}
                         </p>
 
                         <p>
@@ -225,16 +248,13 @@ app.post(
                         margin-top: 35px;
                         color: #888;
                     ">
-                        <p>
-                            Kiitos kun asioit meillä! 🐾
-                        </p>
+                        <p>Kiitos kun asioit meillä! 🐾</p>
 
                         <a href="https://kissakoira.xyz"
                            style="color: #333;">
                             kissakoira.xyz
                         </a>
                     </div>
-
                 </div>
             `;
 
@@ -260,15 +280,8 @@ app.post(
                     );
                 }
             } catch (err) {
-                console.error(
-                    "Customer email error:",
-                    err.message
-                );
+                console.error("Customer email error:", err.message);
             }
-        } else {
-            console.log(
-                "Asiakkaan sähköpostiosoite puuttuu."
-            );
         }
 
         res.json({ received: true });
@@ -278,12 +291,11 @@ app.post(
 // Tavallisten pyyntöjen JSON-käsittely
 app.use(express.json());
 
-// Etusivu
+// API:n testaus
 app.get("/", (req, res) => {
     res.send("Kissakoira API toimii!");
 });
 
-// API-testi
 app.get("/api/test", (req, res) => {
     res.json({
         status: "ok",
@@ -291,40 +303,64 @@ app.get("/api/test", (req, res) => {
     });
 });
 
-// Luo maksusessio
+// TUOTTEIDEN LISTAUS
+app.get("/api/products", (req, res) => {
+    const products = Object.entries(PRODUCTS).map(
+        ([id, product]) => ({
+            id,
+            name: product.name,
+            price: product.price
+        })
+    );
+
+    res.json(products);
+});
+
+// MAKSUSESSION LUOMINEN
 app.post("/api/create-checkout-session", async (req, res) => {
     try {
+        const productId = req.body.productId;
+        const product = PRODUCTS[productId];
+
+        // Tarkistetaan, että tuote löytyy.
+        if (!product) {
+            return res.status(400).json({
+                error: "Tuotetta ei löytynyt."
+            });
+        }
+
         const session = await stripe.checkout.sessions.create({
             mode: "payment",
 
             customer_creation: "always",
 
-            // Laskutusosoite
             billing_address_collection: "required",
 
-            // Toimitusosoite
             shipping_address_collection: {
                 allowed_countries: ["FI"]
             },
 
-            // Puhelinnumero
             phone_number_collection: {
                 enabled: true
             },
 
-            // Tuote ja hinta
             line_items: [
                 {
                     price_data: {
                         currency: "eur",
                         product_data: {
-                            name: "Testituote"
+                            name: product.name
                         },
-                        unit_amount: 500
+                        unit_amount: product.price
                     },
                     quantity: 1
                 }
             ],
+
+            // Tuotetieto kulkee webhookille.
+            metadata: {
+                productId: productId
+            },
 
             success_url:
                 "https://kissakoira.xyz/maksu-onnistui.html",
@@ -346,7 +382,7 @@ app.post("/api/create-checkout-session", async (req, res) => {
     }
 });
 
-// Käynnistä palvelin
+// KÄYNNISTÄ PALVELIN
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
