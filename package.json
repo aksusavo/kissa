@@ -1,0 +1,14 @@
+{
+  "name": "kissa-api",
+  "version": "1.0.0",
+  "description": "Kissakoira website payment API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "stripe": "^18.5.0",
+    "cors": "^2.8.5"
+  }
+}
