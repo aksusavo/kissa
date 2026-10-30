@@ -9,6 +9,7 @@
   "dependencies": {
     "express": "^5.1.0",
     "stripe": "^18.5.0",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "resend": "^6.35.0"
   }
 }

@@ -3,6 +3,10 @@ const express = require("express");
 const cors = require("cors");
 const Stripe = require("stripe");
 
+const { Resend } = require("resend");
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -17,10 +21,11 @@ app.use(cors({
 }));
 
 // Webhook pitää määritellä ENNEN express.json()-middlewarea!
+
 app.post(
     "/api/webhook",
     express.raw({ type: "application/json" }),
-    (req, res) => {
+    async (req, res) => {
         const signature = req.headers["stripe-signature"];
 
         let event;
@@ -39,28 +44,66 @@ app.post(
         if (event.type === "checkout.session.completed") {
             const session = event.data.object;
 
-            console.log("MAKSU ONNISTUI!");
+            if (session.payment_status === "paid") {
+                const shipping =
+                    session.collected_information?.shipping_details;
 
-            console.log("Tilaustunnus:", session.id);
-            console.log("Sähköposti:", session.customer_details?.email);
-            console.log("Puhelin:", session.customer_details?.phone);
-            const shipping =
-                session.collected_information?.shipping_details;
+                const address = shipping?.address || {};
+                const customer = session.customer_details || {};
 
-            console.log("Toimituksen nimi:", shipping?.name);
-            console.log("Toimitusosoite:", shipping?.address);
-            console.log("Katuosoite:", shipping?.address?.line1);
-            console.log("Asunto:", shipping?.address?.line2);
-            console.log("Postinumero:", shipping?.address?.postal_code);
-            console.log("Kaupunki:", shipping?.address?.city);
-            console.log("Maa:", shipping?.address?.country);
+                const amount = (
+                    (session.amount_total || 0) / 100
+                ).toFixed(2);
 
-            // Lisätään sähköposti-ilmoitus myöhemmin.
+                const orderInfo = `
+                    <h2>Uusi tilaus! 🎉</h2>
+                    <p><strong>Tilaus:</strong> ${session.id}</p>
+                    <p><strong>Summa:</strong> ${amount} €</p>
+
+                    <h3>Asiakkaan tiedot</h3>
+                    <p><strong>Nimi:</strong> ${shipping?.name || customer.name || "Ei saatavilla"}</p>
+                    <p><strong>Sähköposti:</strong> ${customer.email || "Ei saatavilla"}</p>
+                    <p><strong>Puhelin:</strong> ${customer.phone || "Ei saatavilla"}</p>
+
+                    <h3>Toimitusosoite</h3>
+                    <p>
+                        ${address.line1 || ""}<br>
+                        ${address.line2 || ""}<br>
+                        ${address.postal_code || ""} ${address.city || ""}<br>
+                        ${address.country || ""}
+                    </p>
+                `;
+
+                console.log("MAKSU ONNISTUI!");
+                console.log("Tilaustunnus:", session.id);
+
+                try {
+                    const { data, error } = await resend.emails.send({
+                        from: "Kissakoira <onboarding@resend.dev>",
+                        to: [process.env.NOTIFICATION_EMAIL],
+                        subject: "Uusi tilaus Kissakoira-kaupasta!",
+                        html: orderInfo
+                    });
+
+                    if (error) {
+                        console.error("Sähköpostivirhe:", error);
+                    } else {
+                        console.log("Tilausilmoitus lähetetty:", data.id);
+                    }
+
+                } catch (emailError) {
+                    console.error(
+                        "Sähköpostin lähetys epäonnistui:",
+                        emailError.message
+                    );
+                }
+            }
         }
 
         res.json({ received: true });
     }
 );
+
 
 // Tavallisten pyyntöjen JSON-käsittely
 app.use(express.json());
