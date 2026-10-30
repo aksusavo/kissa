@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fi">
 
@@ -6,6 +7,119 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Koira Kissa nettisivu</title>
     <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Chat-kupla */
+        .chat-button {
+            position: fixed;
+            right: 25px;
+            bottom: 25px;
+            width: 60px;
+            height: 60px;
+            border: none;
+            border-radius: 50%;
+            background: #2d5be3;
+            color: white;
+            font-size: 27px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px #0003;
+            z-index: 1000;
+        }
+
+        /* Chat-ikkuna */
+        .chat-window {
+            display: none;
+            position: fixed;
+            right: 25px;
+            bottom: 100px;
+            width: 350px;
+            height: 480px;
+            max-width: calc(100vw - 30px);
+            max-height: calc(100vh - 130px);
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 5px 30px #0003;
+            overflow: hidden;
+            flex-direction: column;
+            z-index: 1000;
+            color: #222;
+        }
+
+        .chat-header {
+            background: #2d5be3;
+            color: white;
+            padding: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 22px;
+            cursor: pointer;
+        }
+
+        .messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .message {
+            padding: 10px 13px;
+            border-radius: 12px;
+            max-width: 85%;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+            white-space: pre-wrap;
+        }
+
+        .bot {
+            background: #f0f0f0;
+            align-self: flex-start;
+        }
+
+        .user {
+            background: #2d5be3;
+            color: white;
+            align-self: flex-end;
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            border-top: 1px solid #ddd;
+        }
+
+        .chat-input input {
+            flex: 1;
+            min-width: 0;
+            padding: 11px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .chat-input button {
+            border: none;
+            background: #2d5be3;
+            color: white;
+            border-radius: 8px;
+            padding: 0 14px;
+            cursor: pointer;
+        }
+
+        .chat-input button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
 
 <body>
@@ -17,7 +131,7 @@
     </nav>
 
     <h1>kissakoira.xyz</h1>
-    
+
     <div id="count" aria-live="polite">0</div>
     <button id="press">Paina tästä</button>
     <div class="small">
@@ -42,10 +156,30 @@
     <script>
         (function () {
             var n = 1, el = document.getElementById('count');
-            try { var s = localStorage.getItem('painallukset'); if (s !== null && !isNaN(+s)) n = +s } catch (e) { }
-            function show() { el.textContent = n; try { localStorage.setItem('painallukset', String(n)) } catch (e) { } }
-            document.getElementById('press').addEventListener('click', function () { n++; show() });
-            document.getElementById('undo').addEventListener('click', function () { if (n > 0) { n--; show() } });
+            try {
+                var s = localStorage.getItem('painallukset');
+                if (s !== null && !isNaN(+s)) n = +s;
+            } catch (e) { }
+
+            function show() {
+                el.textContent = n;
+                try {
+                    localStorage.setItem('painallukset', String(n));
+                } catch (e) { }
+            }
+
+            document.getElementById('press').addEventListener('click', function () {
+                n++;
+                show();
+            });
+
+            document.getElementById('undo').addEventListener('click', function () {
+                if (n > 0) {
+                    n--;
+                    show();
+                }
+            });
+
             document.getElementById('reset').addEventListener('click', function () {
                 n = 0;
                 show();
@@ -53,7 +187,110 @@
         })();
     </script>
 
+    <!-- CHAT-KUPLA -->
+    <button class="chat-button" id="chatButton" aria-label="Avaa chatbot">
+        🐱
+    </button>
+
+    <!-- CHAT-IKKUNA -->
+    <div class="chat-window" id="chatWindow">
+        <div class="chat-header">
+            <strong>🐱 Kissakoira AI</strong>
+            <button id="closeChat" aria-label="Sulje chat">×</button>
+        </div>
+
+        <div class="messages" id="messages">
+            <div class="message bot">
+                Moi! Olen Kissakoira AI. Miten voin auttaa? 😺
+            </div>
+        </div>
+
+        <form class="chat-input" id="chatForm">
+            <input
+                type="text"
+                id="userInput"
+                placeholder="Kirjoita viesti..."
+                autocomplete="off"
+                required
+            >
+            <button type="submit" id="sendButton">Lähetä</button>
+        </form>
+    </div>
+
+    <script>
+        // LISÄÄ TÄHÄN OMA GOOGLE APPS SCRIPT URL
+        const API_URL = "AKfycby56e9-1WyEL_sSmoI6yEDmOCz7vl8pJfO6zUkRB5iyuhXV2jDmzs9_OpL-qm1RfZNziQ";
+
+        const chatButton = document.getElementById("chatButton");
+        const chatWindow = document.getElementById("chatWindow");
+        const closeChat = document.getElementById("closeChat");
+
+        const chatForm = document.getElementById("chatForm");
+        const userInput = document.getElementById("userInput");
+        const sendButton = document.getElementById("sendButton");
+        const messages = document.getElementById("messages");
+
+        chatButton.addEventListener("click", () => {
+            chatWindow.style.display = "flex";
+            chatButton.style.display = "none";
+            userInput.focus();
+        });
+
+        closeChat.addEventListener("click", () => {
+            chatWindow.style.display = "none";
+            chatButton.style.display = "block";
+        });
+
+        function addMessage(text, sender) {
+            const div = document.createElement("div");
+            div.className = "message " + sender;
+            div.textContent = text;
+
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+
+            return div;
+        }
+
+        chatForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            addMessage(message, "user");
+
+            userInput.value = "";
+            userInput.disabled = true;
+            sendButton.disabled = true;
+
+            const loading = addMessage("Kirjoittaa...", "bot");
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ message: message })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                loading.textContent = data.reply;
+
+            } catch (error) {
+                console.error(error);
+                loading.textContent =
+                    "Viestin lähettäminen epäonnistui. Yritä uudelleen.";
+            }
+
+            userInput.disabled = false;
+            sendButton.disabled = false;
+            userInput.focus();
+        });
+    </script>
 
 </body>
-
 </html>
