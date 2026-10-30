@@ -1,14 +1,13 @@
+
 <!DOCTYPE html>
 <html lang="fi">
-
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Kissat
-    </title>
+    <title>Kissat</title>
     <link rel="stylesheet" href="style.css">
-</head> 
+</head>
 
 <body>
     <nav class="navbar">
@@ -16,15 +15,58 @@
         <a href="koirat.html">Koirat</a>
         <a href="kissat.html">Kissat</a>
         <a href="2048.html">Peli</a>
-        
     </nav>
 
     <h1>Kissat 🐱</h1>
-    <p>Tervetuloa kissojen alisivulle!</p>
 
     <img src="photos1/cat.png" alt="Kissa" width="250">
 
+    <hr>
+
+    <h2>Testaa maksamista 💳</h2>
+    <p>Testituote – 5,00 €</p>
+
+    <button id="payButton" onclick="makePayment()">
+        Maksa 5,00 €
+    </button>
+
+    <p id="paymentStatus"></p>
+
+    <script>
+        async function makePayment() {
+            const button = document.getElementById("payButton");
+            const status = document.getElementById("paymentStatus");
+
+            button.disabled = true;
+            status.textContent = "Luodaan maksua...";
+
+            try {
+                const response = await fetch(
+                    "https://kissa-dhdn.onrender.com/api/create-checkout-session",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({})
+                    }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok || !data.url) {
+                    throw new Error("Maksun luominen epäonnistui.");
+                }
+
+                window.location.href = data.url;
+
+            } catch (error) {
+                status.textContent = error.message;
+                button.disabled = false;
+            }
+        }
+    </script>
 
 </body>
-
 </html>
+```
