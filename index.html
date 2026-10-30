@@ -123,6 +123,7 @@
 </head>
 
 <body>
+
     <nav class="navbar">
         <a href="index.html">Etusivu</a>
         <a href="koirat.html">Koirat</a>
@@ -133,7 +134,9 @@
     <h1>kissakoira.xyz</h1>
 
     <div id="count" aria-live="polite">0</div>
+
     <button id="press">Paina tästä</button>
+
     <div class="small">
         <button id="undo">Peru</button>
         <button id="reset">Nollaa</button>
@@ -149,10 +152,12 @@
     <img class="kuva" src="photos1/koira.png" alt="Kuva koirasta">
 
     <span class="nav-counter">
-        <img src="https://hits.sh/kissakoira.xyz/index.html.svg?label=Vierailija%20m%C3%A4%C3%A4r%C3%A4&color=1e8dcf"
+        <img
+            src="https://hits.sh/kissakoira.xyz/index.html.svg?label=Vierailija%20m%C3%A4%C3%A4r%C3%A4&color=1e8dcf"
             alt="Kävijämäärä">
     </span>
 
+    <!-- LASKURI -->
     <script>
         (function () {
             var n = 1;
@@ -160,6 +165,7 @@
 
             try {
                 var s = localStorage.getItem('painallukset');
+
                 if (s !== null && !isNaN(+s)) {
                     n = +s;
                 }
@@ -193,15 +199,22 @@
     </script>
 
     <!-- CHAT-KUPLA -->
-    <button class="chat-button" id="chatButton" aria-label="Avaa chatbot">
+    <button
+        class="chat-button"
+        id="chatButton"
+        aria-label="Avaa chatbot">
         🐱
     </button>
 
     <!-- CHAT-IKKUNA -->
     <div class="chat-window" id="chatWindow">
+
         <div class="chat-header">
             <strong>🐱 Kissakoira AI</strong>
-            <button id="closeChat" aria-label="Sulje chat">×</button>
+
+            <button id="closeChat" aria-label="Sulje chat">
+                ×
+            </button>
         </div>
 
         <div class="messages" id="messages">
@@ -211,6 +224,7 @@
         </div>
 
         <form class="chat-input" id="chatForm">
+
             <input
                 type="text"
                 id="userInput"
@@ -218,13 +232,20 @@
                 autocomplete="off"
                 required
             >
-            <button type="submit" id="sendButton">Lähetä</button>
+
+            <button type="submit" id="sendButton">
+                Lähetä
+            </button>
+
         </form>
     </div>
 
+    <!-- CHATBOTIN JAVASCRIPT -->
     <script>
-        // LISÄÄ TÄHÄN OMA KOKO GOOGLE APPS SCRIPT URL
-        const API_URL = "https://script.google.com/macros/s/AKfycbxh2QWXAdTTKTxlJkK77aMRll15b-YEMNyjsXJvjErBqKfepQ7xxoL3mhTRljMFkBhnNw/exec";
+
+        // LISÄÄ TÄHÄN OMA GOOGLE APPS SCRIPT /exec -OSOITE
+        const API_URL = "https://script.google.com/macros/s/OMA_TÄYSI_DEPLOYMENT_ID/exec";
+
 
         const chatButton = document.getElementById("chatButton");
         const chatWindow = document.getElementById("chatWindow");
@@ -235,19 +256,26 @@
         const sendButton = document.getElementById("sendButton");
         const messages = document.getElementById("messages");
 
+
+        // CHATIN AVAAMINEN
         chatButton.addEventListener("click", () => {
             chatWindow.style.display = "flex";
             chatButton.style.display = "none";
             userInput.focus();
         });
 
+
+        // CHATIN SULKEMINEN
         closeChat.addEventListener("click", () => {
             chatWindow.style.display = "none";
             chatButton.style.display = "block";
         });
 
+
+        // VIESTIN LISÄÄMINEN
         function addMessage(text, sender) {
             const div = document.createElement("div");
+
             div.className = "message " + sender;
             div.textContent = text;
 
@@ -257,7 +285,10 @@
             return div;
         }
 
-        chatForm.addEventListener("submit", async (event) => {
+
+        // VIESTIN LÄHETTÄMINEN
+        chatForm.addEventListener("submit", (event) => {
+
             event.preventDefault();
 
             const message = userInput.value.trim();
@@ -266,6 +297,7 @@
                 return;
             }
 
+            // Näytetään käyttäjän viesti
             addMessage(message, "user");
 
             userInput.value = "";
@@ -274,43 +306,68 @@
 
             const loading = addMessage("Kirjoittaa...", "bot");
 
-            try {
-                const response = await fetch(API_URL, {
-                    method: "POST",
-                    body: JSON.stringify({
-                        message: message
-                    })
-                });
 
-                // Luetaan vastaus tekstinä JSONin sijaan.
-                const responseText = await response.text();
+            // Luodaan yksilöllinen callback
+            const callbackName =
+                "geminiCallback_" + Date.now() + "_" +
+                Math.floor(Math.random() * 100000);
 
-                // Tulostetaan tiedot selaimen Consoleen.
-                console.log("HTTP-status:", response.status);
-                console.log("Palvelimen vastaus:", responseText);
 
-                // Yritetään muuttaa vastaus JSON-muotoon.
-                const data = JSON.parse(responseText);
+            // Callback vastaanottaa palvelimen vastauksen
+            window[callbackName] = (data) => {
 
                 if (data.error) {
-                    throw new Error(data.error);
+                    loading.textContent = "Virhe: " + data.error;
+                } else {
+                    loading.textContent = data.reply || "Tyhjä vastaus.";
                 }
 
-                loading.textContent = data.reply || "Tyhjä vastaus palvelimelta.";
+                delete window[callbackName];
 
-            } catch (error) {
-                console.error("Chatbot-virhe:", error);
+                if (script.parentNode) {
+                    script.remove();
+                }
+
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                userInput.focus();
+
+                messages.scrollTop = messages.scrollHeight;
+            };
+
+
+            // Luodaan script-elementti
+            const script = document.createElement("script");
+
+            const params = new URLSearchParams({
+                message: message,
+                callback: callbackName
+            });
+
+            script.src = API_URL + "?" + params.toString();
+
+
+            // Virhe yhteydessä
+            script.onerror = () => {
 
                 loading.textContent =
-                    "Virhe: " + error.message;
-            }
+                    "Yhteys palvelimeen epäonnistui.";
 
-            userInput.disabled = false;
-            sendButton.disabled = false;
-            userInput.focus();
+                delete window[callbackName];
+                script.remove();
+
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                userInput.focus();
+            };
+
+
+            // Lähetetään pyyntö
+            document.body.appendChild(script);
+
         });
+
     </script>
 
 </body>
-
 </html>
