@@ -8,6 +8,7 @@ const PORT = process.env.PORT || 3000;
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
+// CORS
 app.use(cors({
     origin: [
         "https://kissakoira.xyz",
@@ -15,12 +16,55 @@ app.use(cors({
     ]
 }));
 
+// Webhook pitää määritellä ENNEN express.json()-middlewarea!
+app.post(
+    "/api/webhook",
+    express.raw({ type: "application/json" }),
+    (req, res) => {
+        const signature = req.headers["stripe-signature"];
+
+        let event;
+
+        try {
+            event = stripe.webhooks.constructEvent(
+                req.body,
+                signature,
+                process.env.STRIPE_WEBHOOK_SECRET
+            );
+        } catch (err) {
+            console.error("Webhook signature error:", err.message);
+            return res.status(400).send("Webhook error");
+        }
+
+        if (event.type === "checkout.session.completed") {
+            const session = event.data.object;
+
+            console.log("MAKSU ONNISTUI!");
+
+            console.log("Tilaustunnus:", session.id);
+            console.log("Sähköposti:", session.customer_details?.email);
+            console.log("Puhelin:", session.customer_details?.phone);
+            console.log(
+                "Toimitusosoite:",
+                session.shipping_details?.address
+            );
+
+            // Lisätään sähköposti-ilmoitus myöhemmin.
+        }
+
+        res.json({ received: true });
+    }
+);
+
+// Tavallisten pyyntöjen JSON-käsittely
 app.use(express.json());
 
+// Etusivu
 app.get("/", (req, res) => {
     res.send("Kissakoira API toimii!");
 });
 
+// API-testi
 app.get("/api/test", (req, res) => {
     res.json({
         status: "ok",
@@ -28,11 +72,28 @@ app.get("/api/test", (req, res) => {
     });
 });
 
-// Luo Stripe-maksusession
+// Luo maksusessio
 app.post("/api/create-checkout-session", async (req, res) => {
     try {
         const session = await stripe.checkout.sessions.create({
             mode: "payment",
+
+            customer_creation: "always",
+
+            // Laskutusosoite
+            billing_address_collection: "required",
+
+            // Toimitusosoite
+            shipping_address_collection: {
+                allowed_countries: ["FI"]
+            },
+
+            // Puhelinnumero
+            phone_number_collection: {
+                enabled: true
+            },
+
+            // Tuote ja hinta
             line_items: [
                 {
                     price_data: {
@@ -45,8 +106,10 @@ app.post("/api/create-checkout-session", async (req, res) => {
                     quantity: 1
                 }
             ],
+
             success_url:
                 "https://kissakoira.xyz/?payment=success",
+
             cancel_url:
                 "https://kissakoira.xyz/?payment=cancel"
         });
@@ -64,6 +127,8 @@ app.post("/api/create-checkout-session", async (req, res) => {
     }
 });
 
+// Käynnistä palvelin
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
