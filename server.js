@@ -17,15 +17,18 @@ const SENDER = "Kissakoira <tilaukset@kissakoira.xyz>";
 const PRODUCTS = {
     paita1: {
         name: "Testipaita 01",
-        price: 1990
+        price: 1990,
+        image: "https://kissakoira.xyz/photos1/paita1.jpg"
     },
     paita2: {
         name: "Testipaita 02",
-        price: 1990
+        price: 1990,
+        image: "https://kissakoira.xyz/photos1/paita2.jpg"
     },
     paita3: {
         name: "Testipaita 03",
-        price: 2490
+        price: 2490,
+        image: "https://kissakoira.xyz/photos1/paita3.jpg"
     }
 };
 
@@ -349,7 +352,8 @@ app.post("/api/create-checkout-session", async (req, res) => {
                     price_data: {
                         currency: "eur",
                         product_data: {
-                            name: product.name
+                            name: product.name,
+                            images: [product.image]
                         },
                         unit_amount: product.price
                     },
