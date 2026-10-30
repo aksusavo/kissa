@@ -29,7 +29,7 @@ app.post(
             event = stripe.webhooks.constructEvent(
                 req.body,
                 signature,
-                process.env.STRIPE_WEBHOOK_SECRET
+                process.env.STRIPE_WEBHOOK_SECRET.trim()
             );
         } catch (err) {
             console.error("Webhook signature error:", err.message);
