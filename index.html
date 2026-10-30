@@ -201,66 +201,76 @@
             color: white;
         }
 
-        /* CHAT */
+        /* CHAT-KUPLA */
 
         .chat-button {
             position: fixed;
-            right: 25px;
-            bottom: 25px;
-            width: 60px;
-            height: 60px;
+            right: 24px;
+            bottom: 24px;
+            width: 62px;
+            height: 62px;
             border: none;
             border-radius: 50%;
             background: #2d5be3;
             color: white;
-            font-size: 27px;
+            font-size: 29px;
             cursor: pointer;
-            box-shadow: 0 4px 15px #0003;
+            box-shadow: 0 4px 18px #0003;
             z-index: 1000;
+            transition: transform 0.2s;
         }
+
+        .chat-button:hover {
+            transform: scale(1.08);
+        }
+
+        /* CHAT-IKKUNA */
 
         .chat-window {
             display: none;
             position: fixed;
-            right: 25px;
+            right: 24px;
             bottom: 100px;
-            width: 350px;
-            height: 480px;
-            max-width: calc(100vw - 30px);
-            max-height: calc(100vh - 130px);
+            width: 370px;
+            height: 510px;
+            max-width: calc(100vw - 32px);
+            max-height: calc(100dvh - 125px);
             background: white;
             border-radius: 16px;
             box-shadow: 0 5px 30px #0003;
             overflow: hidden;
             flex-direction: column;
-            z-index: 1000;
+            z-index: 1001;
             color: #222;
         }
 
         .chat-header {
             background: #2d5be3;
             color: white;
-            padding: 18px;
+            padding: 17px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0;
         }
 
         .chat-header button {
             background: none;
             border: none;
             color: white;
-            font-size: 22px;
+            font-size: 26px;
             cursor: pointer;
         }
 
         .messages {
             flex: 1;
+            min-height: 0;
             padding: 15px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
             gap: 10px;
+            overscroll-behavior: contain;
         }
 
         .message {
@@ -287,13 +297,17 @@
             display: flex;
             gap: 8px;
             padding: 12px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
             border-top: 1px solid #ddd;
+            flex-shrink: 0;
+            background: white;
         }
 
         .chat-input input {
             flex: 1;
             min-width: 0;
-            padding: 11px;
+            font-size: 16px;
+            padding: 12px;
             border: 1px solid #ddd;
             border-radius: 8px;
         }
@@ -303,13 +317,43 @@
             background: #2d5be3;
             color: white;
             border-radius: 8px;
-            padding: 0 14px;
+            padding: 0 15px;
             cursor: pointer;
         }
 
         .chat-input button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+        }
+
+        /* AUTOMAATTINEN TERVEHDYS */
+
+        .chat-greeting {
+            display: none;
+            position: fixed;
+            right: 98px;
+            bottom: 34px;
+            background: white;
+            color: #222;
+            padding: 13px 17px;
+            border-radius: 14px;
+            box-shadow: 0 3px 18px #0002;
+            font-size: 14px;
+            cursor: pointer;
+            z-index: 999;
+            animation: greetingAppear 0.4s ease;
+        }
+
+        @keyframes greetingAppear {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* MOBIILI */
@@ -338,6 +382,41 @@
             .shop {
                 padding: 50px 18px;
             }
+
+            .chat-button {
+                right: 16px;
+                bottom: max(16px, env(safe-area-inset-bottom));
+                width: 58px;
+                height: 58px;
+            }
+
+            .chat-window {
+                right: 0;
+                bottom: 0;
+                width: 100%;
+                max-width: 100%;
+                height: 100vh;
+                height: 100dvh;
+                max-height: 100dvh;
+                border-radius: 0;
+            }
+
+            .chat-header {
+                padding: 18px;
+                padding-top: max(18px, env(safe-area-inset-top));
+            }
+
+            .chat-input {
+                padding: 12px;
+                padding-bottom: max(12px, env(safe-area-inset-bottom));
+            }
+
+            .chat-greeting {
+                right: 85px;
+                bottom: 25px;
+                max-width: calc(100vw - 115px);
+                font-size: 13px;
+            }
         }
     </style>
 </head>
@@ -355,7 +434,6 @@
         </div>
     </nav>
 
-
     <!-- ETUSIVUN ESITTELY -->
 
     <section class="hero">
@@ -369,7 +447,6 @@
         <a href="#kauppa">Tutustu tuotteisiin</a>
     </section>
 
-
     <!-- TUOTTEET -->
 
     <main class="shop" id="kauppa">
@@ -381,8 +458,6 @@
         </p>
 
         <div class="products">
-
-            <!-- PAITA 1 -->
 
             <article class="product">
                 <img src="photos1/paita1.jpg"
@@ -404,9 +479,6 @@
                 </div>
             </article>
 
-
-            <!-- PAITA 2 -->
-
             <article class="product">
                 <img src="photos1/paita2.jpg"
                      alt="Kissakoiran testipaita 2">
@@ -426,9 +498,6 @@
                     </button>
                 </div>
             </article>
-
-
-            <!-- PAITA 3 -->
 
             <article class="product">
                 <img src="photos1/paita3.jpg"
@@ -453,7 +522,6 @@
         </div>
     </main>
 
-
     <!-- FOOTER -->
 
     <footer>
@@ -461,6 +529,11 @@
         <p>Kiitos kun vierailit kaupassamme! 🐾</p>
     </footer>
 
+    <!-- CHATIN TERVEHDYS -->
+
+    <div class="chat-greeting" id="chatGreeting">
+        Tarvitsetko apua? 🐾
+    </div>
 
     <!-- CHAT-KUPLA -->
 
@@ -470,7 +543,6 @@
         🐱
     </button>
 
-
     <!-- CHAT-IKKUNA -->
 
     <div class="chat-window" id="chatWindow">
@@ -478,7 +550,8 @@
         <div class="chat-header">
             <strong>🐱 Kissakoira AI</strong>
 
-            <button id="closeChat" aria-label="Sulje chat">
+            <button id="closeChat"
+                    aria-label="Sulje chat">
                 ×
             </button>
         </div>
@@ -507,7 +580,6 @@
 
         </form>
     </div>
-
 
     <!-- OSTAMINEN -->
 
@@ -550,33 +622,53 @@
         }
     </script>
 
-
     <!-- CHATBOT -->
 
     <script>
         const API_URL =
-            "https://script.google.com/macros/s/AKfycbxh2QWXAdTTKTxlJkK77aMRll15b-YEMNyjsXJvjErBqKfepQ7xxoL3mhTRljMFkBhnNw/exec";
+            "https://script.google.com/macros/s/AKfycbxh2QWXAdTTKtxlJkK77aMRll15b-YEMNyjsXJvjErBqKfepQ7xxoL3mhTRljMFkBhnNw/exec";
 
         const chatButton = document.getElementById("chatButton");
         const chatWindow = document.getElementById("chatWindow");
         const closeChat = document.getElementById("closeChat");
+        const chatGreeting = document.getElementById("chatGreeting");
 
         const chatForm = document.getElementById("chatForm");
         const userInput = document.getElementById("userInput");
         const sendButton = document.getElementById("sendButton");
         const messages = document.getElementById("messages");
 
-        chatButton.addEventListener("click", () => {
+        let chatOpened = false;
+
+        // Avaa chat
+        function openChat() {
+            chatOpened = true;
             chatWindow.style.display = "flex";
             chatButton.style.display = "none";
-            userInput.focus();
-        });
+            chatGreeting.style.display = "none";
 
-        closeChat.addEventListener("click", () => {
+            userInput.focus();
+        }
+
+        // Sulje chat
+        function closeChatWindow() {
             chatWindow.style.display = "none";
             chatButton.style.display = "block";
-        });
+        }
 
+        chatButton.addEventListener("click", openChat);
+        chatGreeting.addEventListener("click", openChat);
+
+        closeChat.addEventListener("click", closeChatWindow);
+
+        // Näytä tervehdys 2,5 sekunnin kuluttua
+        setTimeout(() => {
+            if (!chatOpened) {
+                chatGreeting.style.display = "block";
+            }
+        }, 2500);
+
+        // Lisää viesti keskusteluun
         function addMessage(text, sender) {
             const div = document.createElement("div");
 
@@ -589,6 +681,7 @@
             return div;
         }
 
+        // Lähetä viesti
         chatForm.addEventListener("submit", (event) => {
             event.preventDefault();
 
@@ -621,7 +714,11 @@
 
                 userInput.disabled = false;
                 sendButton.disabled = false;
-                userInput.focus();
+
+                if (chatWindow.style.display === "flex") {
+                    userInput.focus();
+                }
+
                 messages.scrollTop = messages.scrollHeight;
             }
 
@@ -629,7 +726,8 @@
                 if (data.error) {
                     loading.textContent = "Virhe: " + data.error;
                 } else {
-                    loading.textContent = data.reply || "Tyhjä vastaus.";
+                    loading.textContent =
+                        data.reply || "Tyhjä vastaus.";
                 }
 
                 finish();
