@@ -12,8 +12,6 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 const SENDER = "Kissakoira <tilaukset@kissakoira.xyz>";
 
-// Tuotteet ja hinnat määritellään backendissä.
-// Älä luota selaimesta tulevaan hintaan.
 const PRODUCTS = {
     paita1: {
         name: "Testipaita 01",
@@ -32,7 +30,8 @@ const PRODUCTS = {
     }
 };
 
-// HTML-erikoismerkkien suojaus
+const SIZES = ["S", "M", "L"];
+
 function escapeHtml(value = "") {
     return String(value).replace(/[&<>"']/g, char => ({
         "&": "&amp;",
@@ -43,7 +42,6 @@ function escapeHtml(value = "") {
     })[char]);
 }
 
-// CORS
 app.use(cors({
     origin: [
         "https://kissakoira.xyz",
@@ -52,13 +50,12 @@ app.use(cors({
 }));
 
 // STRIPE WEBHOOK
-// Tämä täytyy olla ennen express.json()-käsittelyä.
+// Raw body täytyy käsitellä ennen express.json()-käsittelyä.
 app.post(
     "/api/webhook",
     express.raw({ type: "application/json" }),
     async (req, res) => {
         const signature = req.headers["stripe-signature"];
-
         let event;
 
         try {
@@ -78,216 +75,285 @@ app.post(
 
         const session = event.data.object;
 
-        // Käsitellään vain onnistuneet maksut.
         if (session.payment_status !== "paid") {
             return res.json({ received: true });
         }
 
-        const product = PRODUCTS[session.metadata?.productId];
-
-        const shipping =
-            session.collected_information?.shipping_details ||
-            session.shipping_details;
-
-        const address = shipping?.address || {};
-        const customer = session.customer_details || {};
-
-        const name = escapeHtml(
-            shipping?.name || customer.name || "Asiakas"
-        );
-
-        const email = customer.email || "";
-
-        const phone = escapeHtml(
-            customer.phone || "Ei ilmoitettu"
-        );
-
-        const street = escapeHtml(address.line1 || "");
-        const apartment = escapeHtml(address.line2 || "");
-        const postal = escapeHtml(address.postal_code || "");
-        const city = escapeHtml(address.city || "");
-        const country = escapeHtml(address.country || "");
-
-        const amount = (
-            (session.amount_total || 0) / 100
-        ).toFixed(2);
-
-        const orderId = session.id;
-
-        const productName = escapeHtml(
-            product?.name || "Tuntematon tuote"
-        );
-
-        const addressHtml = `
-            ${street}<br>
-            ${apartment ? apartment + "<br>" : ""}
-            ${postal} ${city}<br>
-            ${country}
-        `;
-
-        console.log("MAKSU ONNISTUI!");
-        console.log("Tilaustunnus:", orderId);
-        console.log("Tuote:", productName);
-        console.log("Sähköposti:", email);
-        console.log("Toimitusosoite:", address);
-
-        // ILMOITUS YLLÄPITÄJÄLLE
-        const adminHtml = `
-            <h2>Uusi tilaus! 🎉</h2>
-
-            <p><strong>Tilausnumero:</strong> ${escapeHtml(orderId)}</p>
-            <p><strong>Tuote:</strong> ${productName}</p>
-            <p><strong>Maksettu summa:</strong> ${amount} €</p>
-
-            <h3>Asiakkaan tiedot</h3>
-
-            <p><strong>Nimi:</strong> ${name}</p>
-            <p><strong>Sähköposti:</strong>
-                ${escapeHtml(email || "Ei saatavilla")}
-            </p>
-            <p><strong>Puhelin:</strong> ${phone}</p>
-
-            <h3>Toimitusosoite</h3>
-            <p>${addressHtml}</p>
-        `;
-
         try {
-            const { data, error } = await resend.emails.send(
-                {
-                    from: SENDER,
-                    to: [process.env.NOTIFICATION_EMAIL],
-                    subject: "Uusi tilaus Kissakoira-kaupasta!",
-                    html: adminHtml
-                },
-                {
-                    idempotencyKey: `admin-order-${orderId}`
-                }
+            // Haetaan kaikki maksetun tilauksen tuoterivit Stripe:stä.
+            const lineItems = await stripe.checkout.sessions.listLineItems(
+                session.id,
+                { limit: 100 }
             );
 
-            if (error) {
-                console.error("Admin email error:", error);
-            } else {
-                console.log("Ylläpitäjän sähköposti lähetetty:", data.id);
-            }
-        } catch (err) {
-            console.error("Admin email error:", err.message);
-        }
+            const shipping =
+                session.collected_information?.shipping_details ||
+                session.shipping_details;
 
-        // VAHVISTUS ASIAKKAALLE
-        if (email) {
-            const customerHtml = `
-                <div style="
-                    max-width: 600px;
-                    margin: auto;
-                    padding: 30px;
-                    font-family: Arial, sans-serif;
-                    color: #333;
-                    background: #ffffff;
+            const address = shipping?.address || {};
+            const customer = session.customer_details || {};
+
+            const name = escapeHtml(
+                shipping?.name || customer.name || "Asiakas"
+            );
+
+            const email = customer.email || "";
+
+            const phone = escapeHtml(
+                customer.phone || "Ei ilmoitettu"
+            );
+
+            const street = escapeHtml(address.line1 || "");
+            const apartment = escapeHtml(address.line2 || "");
+            const postal = escapeHtml(address.postal_code || "");
+            const city = escapeHtml(address.city || "");
+            const country = escapeHtml(address.country || "");
+
+            const amount = (
+                (session.amount_total || 0) / 100
+            ).toFixed(2);
+
+            const orderId = session.id;
+
+            const orderRows = lineItems.data.map(item => {
+                const description = escapeHtml(
+                    item.description || "Tuote"
+                );
+
+                const quantity = item.quantity || 1;
+
+                const rowTotal = (
+                    (item.amount_total || 0) / 100
+                ).toFixed(2);
+
+                return `
+                    <tr>
+                        <td style="padding: 8px; border-bottom: 1px solid #ddd;">
+                            ${description}
+                        </td>
+                        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">
+                            ${quantity} kpl
+                        </td>
+                        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">
+                            ${rowTotal} €
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+
+            const orderTable = `
+                <table style="
+                    width: 100%;
+                    border-collapse: collapse;
+                    text-align: left;
                 ">
+                    <thead>
+                        <tr>
+                            <th style="padding: 8px; border-bottom: 2px solid #ccc;">
+                                Tuote
+                            </th>
+                            <th style="padding: 8px; border-bottom: 2px solid #ccc; text-align: center;">
+                                Määrä
+                            </th>
+                            <th style="padding: 8px; border-bottom: 2px solid #ccc; text-align: right;">
+                                Yhteensä
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${orderRows}
+                    </tbody>
+                </table>
+            `;
 
-                    <div style="text-align: center;">
-                        <h2 style="letter-spacing: 3px;">
-                            KISSAKOIRA
-                        </h2>
+            const addressHtml = `
+                ${street}<br>
+                ${apartment ? apartment + "<br>" : ""}
+                ${postal} ${city}<br>
+                ${country}
+            `;
 
-                        <div style="
-                            font-size: 55px;
-                            color: #25a64a;
-                            margin: 25px;
-                        ">✓</div>
+            console.log("MAKSU ONNISTUI!");
+            console.log("Tilaustunnus:", orderId);
+            console.log("Tuoterivit:", lineItems.data.length);
+            console.log("Sähköposti:", email);
+            console.log("Toimitusosoite:", address);
 
-                        <h1 style="color: #25a64a;">
-                            Kiitos tilauksestasi!
-                        </h1>
+            // ILMOITUS YLLÄPITÄJÄLLE
+            const adminHtml = `
+                <h2>Uusi tilaus! 🎉</h2>
 
-                        <p>Hei ${name}! ❤️</p>
+                <p>
+                    <strong>Tilausnumero:</strong>
+                    ${escapeHtml(orderId)}
+                </p>
 
-                        <p>
-                            Maksusi on vastaanotettu onnistuneesti.
-                            Tilauksesi on tullut meille perille.
-                        </p>
-                    </div>
+                <h3>Tilatut tuotteet</h3>
+                ${orderTable}
 
-                    <div style="
-                        background: #f5f5f5;
-                        padding: 20px;
-                        border-radius: 12px;
-                        margin-top: 25px;
-                    ">
-                        <h3>Tilauksen tiedot</h3>
+                <p>
+                    <strong>Maksettu summa:</strong>
+                    ${amount} €
+                </p>
 
-                        <p>
-                            <strong>Tilausnumero:</strong><br>
-                            ${escapeHtml(orderId)}
-                        </p>
+                <h3>Asiakkaan tiedot</h3>
 
-                        <p>
-                            <strong>Tuote:</strong><br>
-                            ${productName}
-                        </p>
+                <p><strong>Nimi:</strong> ${name}</p>
+                <p>
+                    <strong>Sähköposti:</strong>
+                    ${escapeHtml(email || "Ei saatavilla")}
+                </p>
+                <p><strong>Puhelin:</strong> ${phone}</p>
 
-                        <p>
-                            <strong>Maksettu summa:</strong><br>
-                            ${amount} €
-                        </p>
-
-                        <p>
-                            <strong>Maksun tila:</strong><br>
-                            Maksu vastaanotettu ✓
-                        </p>
-                    </div>
-
-                    <div style="margin-top: 25px;">
-                        <h3>Toimitusosoite</h3>
-
-                        <p>
-                            ${name}<br>
-                            ${addressHtml}
-                        </p>
-                    </div>
-
-                    <div style="
-                        text-align: center;
-                        margin-top: 35px;
-                        color: #888;
-                    ">
-                        <p>Kiitos kun asioit meillä! 🐾</p>
-
-                        <a href="https://kissakoira.xyz"
-                           style="color: #333;">
-                            kissakoira.xyz
-                        </a>
-                    </div>
-                </div>
+                <h3>Toimitusosoite</h3>
+                <p>${addressHtml}</p>
             `;
 
             try {
                 const { data, error } = await resend.emails.send(
                     {
                         from: SENDER,
-                        to: [email],
-                        subject: "Kiitos tilauksestasi! ❤️",
-                        html: customerHtml
+                        to: [process.env.NOTIFICATION_EMAIL],
+                        subject: "Uusi tilaus Kissakoira-kaupasta!",
+                        html: adminHtml
                     },
                     {
-                        idempotencyKey: `customer-order-${orderId}`
+                        idempotencyKey: `admin-order-${orderId}`
                     }
                 );
 
                 if (error) {
-                    console.error("Customer email error:", error);
+                    console.error("Admin email error:", error);
                 } else {
                     console.log(
-                        "Asiakkaan vahvistus lähetetty:",
+                        "Ylläpitäjän sähköposti lähetetty:",
                         data.id
                     );
                 }
             } catch (err) {
-                console.error("Customer email error:", err.message);
+                console.error("Admin email error:", err.message);
             }
-        }
 
-        res.json({ received: true });
+            // VAHVISTUS ASIAKKAALLE
+            if (email) {
+                const customerHtml = `
+                    <div style="
+                        max-width: 600px;
+                        margin: auto;
+                        padding: 30px;
+                        font-family: Arial, sans-serif;
+                        color: #333;
+                        background: #ffffff;
+                    ">
+
+                        <div style="text-align: center;">
+                            <h2 style="letter-spacing: 3px;">
+                                KISSAKOIRA
+                            </h2>
+
+                            <div style="
+                                font-size: 55px;
+                                color: #25a64a;
+                                margin: 25px;
+                            ">✓</div>
+
+                            <h1 style="color: #25a64a;">
+                                Kiitos tilauksestasi!
+                            </h1>
+
+                            <p>Hei ${name}! ❤️</p>
+
+                            <p>
+                                Maksusi on vastaanotettu onnistuneesti.
+                                Tilauksesi on tullut meille perille.
+                            </p>
+                        </div>
+
+                        <div style="
+                            background: #f5f5f5;
+                            padding: 20px;
+                            border-radius: 12px;
+                            margin-top: 25px;
+                        ">
+                            <h3>Tilauksen tiedot</h3>
+
+                            <p>
+                                <strong>Tilausnumero:</strong><br>
+                                ${escapeHtml(orderId)}
+                            </p>
+
+                            ${orderTable}
+
+                            <p>
+                                <strong>Maksettu summa:</strong><br>
+                                ${amount} €
+                            </p>
+
+                            <p>
+                                <strong>Maksun tila:</strong><br>
+                                Maksu vastaanotettu ✓
+                            </p>
+                        </div>
+
+                        <div style="margin-top: 25px;">
+                            <h3>Toimitusosoite</h3>
+
+                            <p>
+                                ${name}<br>
+                                ${addressHtml}
+                            </p>
+                        </div>
+
+                        <div style="
+                            text-align: center;
+                            margin-top: 35px;
+                            color: #888;
+                        ">
+                            <p>Kiitos kun asioit meillä! 🐾</p>
+
+                            <a href="https://kissakoira.xyz"
+                               style="color: #333;">
+                                kissakoira.xyz
+                            </a>
+                        </div>
+                    </div>
+                `;
+
+                try {
+                    const { data, error } = await resend.emails.send(
+                        {
+                            from: SENDER,
+                            to: [email],
+                            subject: "Kiitos tilauksestasi! ❤️",
+                            html: customerHtml
+                        },
+                        {
+                            idempotencyKey: `customer-order-${orderId}`
+                        }
+                    );
+
+                    if (error) {
+                        console.error("Customer email error:", error);
+                    } else {
+                        console.log(
+                            "Asiakkaan vahvistus lähetetty:",
+                            data.id
+                        );
+                    }
+                } catch (err) {
+                    console.error(
+                        "Customer email error:",
+                        err.message
+                    );
+                }
+            }
+
+            return res.json({ received: true });
+
+        } catch (err) {
+            console.error("Webhook processing error:", err);
+            return res.status(500).send("Webhook processing failed");
+        }
     }
 );
 
@@ -312,23 +378,73 @@ app.get("/api/products", (req, res) => {
         ([id, product]) => ({
             id,
             name: product.name,
-            price: product.price
+            price: product.price,
+            image: product.image,
+            sizes: SIZES
         })
     );
 
     res.json(products);
 });
 
-// MAKSUSESSION LUOMINEN
+// MAKSUSESSION LUOMINEN OSTOSKORISTA
 app.post("/api/create-checkout-session", async (req, res) => {
     try {
-        const productId = req.body.productId;
-        const product = PRODUCTS[productId];
+        const items = req.body.items;
 
-        // Tarkistetaan, että tuote löytyy.
-        if (!product) {
+        if (
+            !Array.isArray(items) ||
+            items.length === 0 ||
+            items.length > 30
+        ) {
             return res.status(400).json({
-                error: "Tuotetta ei löytynyt."
+                error: "Ostoskori on tyhjä tai virheellinen."
+            });
+        }
+
+        const lineItems = [];
+
+        for (const item of items) {
+            const product = PRODUCTS[item.productId];
+            const size = item.size;
+            const quantity = Number(item.quantity);
+
+            if (!product) {
+                return res.status(400).json({
+                    error: "Ostoskori sisältää tuntemattoman tuotteen."
+                });
+            }
+
+            if (!SIZES.includes(size)) {
+                return res.status(400).json({
+                    error: "Valitse tuotteelle koko S, M tai L."
+                });
+            }
+
+            if (
+                !Number.isInteger(quantity) ||
+                quantity < 1 ||
+                quantity > 10
+            ) {
+                return res.status(400).json({
+                    error: "Tuotteen määrä ei ole kelvollinen."
+                });
+            }
+
+            lineItems.push({
+                price_data: {
+                    currency: "eur",
+                    product_data: {
+                        name: `${product.name} (koko ${size})`,
+                        images: [product.image],
+                        metadata: {
+                            productId: item.productId,
+                            size: size
+                        }
+                    },
+                    unit_amount: product.price
+                },
+                quantity: quantity
             });
         }
 
@@ -347,24 +463,7 @@ app.post("/api/create-checkout-session", async (req, res) => {
                 enabled: true
             },
 
-            line_items: [
-                {
-                    price_data: {
-                        currency: "eur",
-                        product_data: {
-                            name: product.name,
-                            images: [product.image]
-                        },
-                        unit_amount: product.price
-                    },
-                    quantity: 1
-                }
-            ],
-
-            // Tuotetieto kulkee webhookille.
-            metadata: {
-                productId: productId
-            },
+            line_items: lineItems,
 
             success_url:
                 "https://kissakoira.xyz/maksu-onnistui.html",

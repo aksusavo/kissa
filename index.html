@@ -164,6 +164,27 @@
             margin-bottom: 18px;
         }
 
+        /* KOKOVALINTA */
+
+        .size-label {
+            display: block;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .size-select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: white;
+            font-size: 15px;
+            margin-bottom: 15px;
+        }
+
+        /* LISÄÄ OSTOSKORIIN */
+
         .buy-button {
             display: block;
             width: 100%;
@@ -182,9 +203,131 @@
             background: #444;
         }
 
-        .buy-button:disabled {
+        /* OSTOSKORI */
+
+        .cart-section {
+            max-width: 850px;
+            margin: 0 auto 70px;
+            padding: 0 25px;
+        }
+
+        .cart-box {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 3px 15px #0000000d;
+        }
+
+        .cart-box h2 {
+            font-size: 27px;
+            margin-bottom: 20px;
+        }
+
+        .cart-empty {
+            color: #888;
+            text-align: center;
+            padding: 25px 0;
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            padding: 18px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .cart-item-info {
+            flex: 1;
+        }
+
+        .cart-item-info strong {
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .cart-item-info span {
+            color: #777;
+            font-size: 14px;
+        }
+
+        .cart-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .quantity-button {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: white;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .quantity-button:hover {
+            background: #eee;
+        }
+
+        .quantity-number {
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .remove-button {
+            border: none;
+            background: none;
+            color: #c33;
+            cursor: pointer;
+            font-size: 13px;
+            margin-left: 8px;
+        }
+
+        .remove-button:hover {
+            text-decoration: underline;
+        }
+
+        .cart-total {
+            display: flex;
+            justify-content: space-between;
+            font-size: 21px;
+            font-weight: bold;
+            margin-top: 25px;
+            padding-top: 15px;
+        }
+
+        .checkout-button {
+            display: block;
+            width: 100%;
+            border: none;
+            background: #2d5be3;
+            color: white;
+            padding: 16px;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 25px;
+            transition: 0.2s;
+        }
+
+        .checkout-button:hover {
+            background: #2148bd;
+        }
+
+        .checkout-button:disabled {
             opacity: 0.6;
             cursor: wait;
+        }
+
+        .cart-note {
+            color: #888;
+            font-size: 12px;
+            text-align: center;
+            margin-top: 12px;
         }
 
         /* FOOTER */
@@ -383,6 +526,22 @@
                 padding: 50px 18px;
             }
 
+            .cart-section {
+                padding: 0 18px;
+            }
+
+            .cart-box {
+                padding: 20px;
+            }
+
+            .cart-item {
+                flex-wrap: wrap;
+            }
+
+            .cart-controls {
+                width: 100%;
+            }
+
             .chat-button {
                 right: 16px;
                 bottom: max(16px, env(safe-area-inset-bottom));
@@ -431,6 +590,7 @@
         <div class="nav-links">
             <a href="index.html">Etusivu</a>
             <a href="#kauppa">Kauppa</a>
+            <a href="#ostoskori">Ostoskori (<span id="cartCount">0</span>)</a>
         </div>
     </nav>
 
@@ -472,9 +632,20 @@
 
                     <div class="price">19,90 €</div>
 
+                    <label class="size-label"
+                           for="size-paita1">
+                        Valitse koko
+                    </label>
+
+                    <select class="size-select" id="size-paita1">
+                        <option value="S">S</option>
+                        <option value="M" selected>M</option>
+                        <option value="L">L</option>
+                    </select>
+
                     <button class="buy-button"
-                            onclick="buyProduct('paita1', this)">
-                        Osta nyt
+                            onclick="addToCart('paita1')">
+                        Lisää ostoskoriin
                     </button>
                 </div>
             </article>
@@ -492,9 +663,20 @@
 
                     <div class="price">19,90 €</div>
 
+                    <label class="size-label"
+                           for="size-paita2">
+                        Valitse koko
+                    </label>
+
+                    <select class="size-select" id="size-paita2">
+                        <option value="S">S</option>
+                        <option value="M" selected>M</option>
+                        <option value="L">L</option>
+                    </select>
+
                     <button class="buy-button"
-                            onclick="buyProduct('paita2', this)">
-                        Osta nyt
+                            onclick="addToCart('paita2')">
+                        Lisää ostoskoriin
                     </button>
                 </div>
             </article>
@@ -512,15 +694,64 @@
 
                     <div class="price">24,90 €</div>
 
+                    <label class="size-label"
+                           for="size-paita3">
+                        Valitse koko
+                    </label>
+
+                    <select class="size-select" id="size-paita3">
+                        <option value="S">S</option>
+                        <option value="M" selected>M</option>
+                        <option value="L">L</option>
+                    </select>
+
                     <button class="buy-button"
-                            onclick="buyProduct('paita3', this)">
-                        Osta nyt
+                            onclick="addToCart('paita3')">
+                        Lisää ostoskoriin
                     </button>
                 </div>
             </article>
 
         </div>
     </main>
+
+    <!-- OSTOSKORI -->
+
+    <section class="cart-section" id="ostoskori">
+
+        <div class="cart-box">
+
+            <h2>Ostoskori 🛒</h2>
+
+            <div id="cartItems">
+                <p class="cart-empty">
+                    Ostoskorisi on vielä tyhjä.
+                </p>
+            </div>
+
+            <div id="cartSummary" hidden>
+
+                <div class="cart-total">
+                    <span>Yhteensä</span>
+                    <span id="cartTotal">0,00 €</span>
+                </div>
+
+                <button
+                    class="checkout-button"
+                    id="checkoutButton"
+                    onclick="checkout()">
+                    Siirry kassalle
+                </button>
+
+                <p class="cart-note">
+                    Toimituskulut ja maksutiedot näytetään kassalla.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
 
     <!-- FOOTER -->
 
@@ -581,12 +812,206 @@
         </form>
     </div>
 
-    <!-- OSTAMINEN -->
+    <!-- OSTOSKORI JA STRIPE -->
 
     <script>
         const API_BASE = "https://kissa-dhdn.onrender.com";
 
-        async function buyProduct(productId, button) {
+        const PRODUCTS = {
+            paita1: {
+                name: "Testipaita 01",
+                price: 1990
+            },
+            paita2: {
+                name: "Testipaita 02",
+                price: 1990
+            },
+            paita3: {
+                name: "Testipaita 03",
+                price: 2490
+            }
+        };
+
+        // Ostoskorin tuotteet tallennetaan tähän.
+        // Jokainen tuote + koko on oma rivinsä.
+        let cart = [];
+
+        // Muunna sentit euroiksi.
+        function formatPrice(price) {
+            return (price / 100).toFixed(2)
+                .replace(".", ",") + " €";
+        }
+
+        // Lisää tuote ostoskoriin.
+        function addToCart(productId) {
+            const product = PRODUCTS[productId];
+
+            if (!product) return;
+
+            const sizeSelect = document.getElementById(
+                "size-" + productId
+            );
+
+            const size = sizeSelect.value;
+
+            const existingItem = cart.find(item =>
+                item.productId === productId &&
+                item.size === size
+            );
+
+            if (existingItem) {
+                if (existingItem.quantity >= 10) {
+                    alert("Voit lisätä enintään 10 kappaletta samaa kokoa.");
+                    return;
+                }
+
+                existingItem.quantity++;
+
+            } else {
+                cart.push({
+                    productId: productId,
+                    size: size,
+                    quantity: 1
+                });
+            }
+
+            updateCart();
+
+            // Näytä ostoskoriin lisäyksen jälkeen.
+            const cartSection = document.getElementById("ostoskori");
+
+            cartSection.scrollIntoView({
+                behavior: "smooth",
+                block: "nearest"
+            });
+        }
+
+        // Muuta tuotteen kappalemäärää.
+        function changeQuantity(index, change) {
+            const item = cart[index];
+
+            if (!item) return;
+
+            item.quantity += change;
+
+            if (item.quantity <= 0) {
+                cart.splice(index, 1);
+            }
+
+            if (item.quantity > 10) {
+                item.quantity = 10;
+            }
+
+            updateCart();
+        }
+
+        // Poista tuote kokonaan.
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCart();
+        }
+
+        // Päivitä ostoskorin näkymä.
+        function updateCart() {
+            const cartItems = document.getElementById("cartItems");
+            const cartSummary = document.getElementById("cartSummary");
+            const cartCount = document.getElementById("cartCount");
+            const cartTotal = document.getElementById("cartTotal");
+
+            const totalQuantity = cart.reduce(
+                (sum, item) => sum + item.quantity,
+                0
+            );
+
+            const totalPrice = cart.reduce(
+                (sum, item) =>
+                    sum +
+                    PRODUCTS[item.productId].price * item.quantity,
+                0
+            );
+
+            cartCount.textContent = totalQuantity;
+            cartTotal.textContent = formatPrice(totalPrice);
+
+            if (cart.length === 0) {
+                cartItems.innerHTML = `
+                    <p class="cart-empty">
+                        Ostoskorisi on vielä tyhjä.
+                    </p>
+                `;
+
+                cartSummary.hidden = true;
+                return;
+            }
+
+            cartSummary.hidden = false;
+
+            cartItems.innerHTML = cart.map((item, index) => {
+                const product = PRODUCTS[item.productId];
+
+                const itemTotal =
+                    product.price * item.quantity;
+
+                return `
+                    <div class="cart-item">
+
+                        <div class="cart-item-info">
+                            <strong>${product.name}</strong>
+
+                            <span>
+                                Koko ${item.size} ·
+                                ${formatPrice(product.price)} / kpl
+                            </span>
+
+                            <br>
+
+                            <span>
+                                Yhteensä: ${formatPrice(itemTotal)}
+                            </span>
+                        </div>
+
+                        <div class="cart-controls">
+
+                            <button
+                                class="quantity-button"
+                                onclick="changeQuantity(${index}, -1)"
+                                aria-label="Vähennä määrää">
+                                −
+                            </button>
+
+                            <span class="quantity-number">
+                                ${item.quantity}
+                            </span>
+
+                            <button
+                                class="quantity-button"
+                                onclick="changeQuantity(${index}, 1)"
+                                aria-label="Lisää määrää">
+                                +
+                            </button>
+
+                            <button
+                                class="remove-button"
+                                onclick="removeFromCart(${index})">
+                                Poista
+                            </button>
+
+                        </div>
+
+                    </div>
+                `;
+            }).join("");
+        }
+
+        // Lähetä koko ostoskori Stripe-kassalle.
+        async function checkout() {
+            if (cart.length === 0) {
+                alert("Ostoskorisi on tyhjä.");
+                return;
+            }
+
+            const button = document.getElementById("checkoutButton");
+
             button.disabled = true;
             button.textContent = "Siirrytään maksamaan...";
 
@@ -595,11 +1020,13 @@
                     API_BASE + "/api/create-checkout-session",
                     {
                         method: "POST",
+
                         headers: {
                             "Content-Type": "application/json"
                         },
+
                         body: JSON.stringify({
-                            productId: productId
+                            items: cart
                         })
                     }
                 );
@@ -608,7 +1035,8 @@
 
                 if (!response.ok || !data.url) {
                     throw new Error(
-                        data.error || "Maksun luominen epäonnistui."
+                        data.error ||
+                        "Maksun luominen epäonnistui."
                     );
                 }
 
@@ -616,10 +1044,14 @@
 
             } catch (error) {
                 alert(error.message);
+
                 button.disabled = false;
-                button.textContent = "Osta nyt";
+                button.textContent = "Siirry kassalle";
             }
         }
+
+        // Alusta ostoskori.
+        updateCart();
     </script>
 
     <!-- CHATBOT -->
