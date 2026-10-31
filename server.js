@@ -32,6 +32,32 @@ const PRODUCTS = {
 
 const SIZES = ["S", "M", "L"];
 
+// CORS-ASETUKSET
+const allowedOrigins = [
+    "https://kissakoira.xyz",
+    "https://www.kissakoira.xyz"
+];
+
+const corsOptions = {
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            console.log("CORS-estetty origin:", origin);
+            callback(new Error("Origin ei ole sallittu."));
+        }
+    },
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    optionsSuccessStatus: 204
+};
+
+// CORS käsitellään ennen kaikkia API-reittejä.
+app.use(cors(corsOptions));
+
+// Erillinen OPTIONS-käsittely.
+app.options(/.*/, cors(corsOptions));
+
 function escapeHtml(value = "") {
     return String(value).replace(/[&<>"']/g, char => ({
         "&": "&amp;",
@@ -42,7 +68,7 @@ function escapeHtml(value = "") {
     })[char]);
 }
 
-// Lähettää maksetun tilauksen Google Sheetsiin.
+// GOOGLE SHEETS -TILAUSKIRJAUS
 async function logOrderToSheets(order) {
     const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
     const secret = process.env.GOOGLE_SCRIPT_SECRET;
@@ -66,8 +92,7 @@ async function logOrderToSheets(order) {
 
     if (!response.ok) {
         throw new Error(
-            "Google Sheets palautti HTTP-virheen: " +
-            response.status
+            "Google Sheets HTTP-virhe: " + response.status
         );
     }
 
@@ -109,7 +134,10 @@ app.post(
                 process.env.STRIPE_WEBHOOK_SECRET.trim()
             );
         } catch (err) {
-            console.error("Webhook signature error:", err.message);
+            console.error(
+                "Webhook signature error:",
+                err.message
+            );
             return res.status(400).send("Webhook error");
         }
 
@@ -124,11 +152,12 @@ app.post(
         }
 
         try {
-            // Haetaan kaikki maksetun tilauksen tuoterivit Stripe:stä.
-            const lineItems = await stripe.checkout.sessions.listLineItems(
-                session.id,
-                { limit: 100 }
-            );
+            // Haetaan kaikki tilauksen tuoterivit Stripestä.
+            const lineItems =
+                await stripe.checkout.sessions.listLineItems(
+                    session.id,
+                    { limit: 100 }
+                );
 
             const shipping =
                 session.collected_information?.shipping_details ||
@@ -141,10 +170,11 @@ app.post(
                 shipping?.name || customer.name || "Asiakas";
 
             const name = escapeHtml(rawName);
-
             const email = customer.email || "";
 
-            const rawPhone = customer.phone || "Ei ilmoitettu";
+            const rawPhone =
+                customer.phone || "Ei ilmoitettu";
+
             const phone = escapeHtml(rawPhone);
 
             const street = escapeHtml(address.line1 || "");
@@ -159,25 +189,27 @@ app.post(
 
             const orderId = session.id;
 
-            // Tuotteet yhteen tekstikenttään Google Sheetsia varten.
+            // Tuotteet Google Sheetsiin.
             const productsForSheet = lineItems.data.map(item => {
-                const description = item.description || "Tuote";
+                const description =
+                    item.description || "Tuote";
+
                 const quantity = item.quantity || 1;
+
                 return `${description} x ${quantity}`;
             }).join(", ");
 
             const addressForSheet = [
                 address.line1,
                 address.line2,
-                [address.postal_code, address.city]
-                    .filter(Boolean)
-                    .join(" "),
+                [
+                    address.postal_code,
+                    address.city
+                ].filter(Boolean).join(" "),
                 address.country
             ].filter(Boolean).join(", ");
 
             // KIRJATAAN TILAUS GOOGLE SHEETSIIN.
-            // Jos tämä epäonnistuu, Stripe saa HTTP 500 -vastauksen
-            // ja yrittää webhookin käsittelyä myöhemmin uudelleen.
             await logOrderToSheets({
                 orderId: orderId,
                 createdAt: new Date(
@@ -191,6 +223,7 @@ app.post(
                 address: addressForSheet
             });
 
+            // SÄHKÖPOSTIN TUOTERIVIT
             const orderRows = lineItems.data.map(item => {
                 const description = escapeHtml(
                     item.description || "Tuote"
@@ -307,7 +340,10 @@ app.post(
                     );
                 }
             } catch (err) {
-                console.error("Admin email error:", err.message);
+                console.error(
+                    "Admin email error:",
+                    err.message
+                );
             }
 
             // VAHVISTUS ASIAKKAALLE
@@ -321,7 +357,6 @@ app.post(
                         color: #333;
                         background: #ffffff;
                     ">
-
                         <div style="text-align: center;">
                             <h2 style="letter-spacing: 3px;">
                                 KISSAKOIRA
@@ -409,7 +444,10 @@ app.post(
                     );
 
                     if (error) {
-                        console.error("Customer email error:", error);
+                        console.error(
+                            "Customer email error:",
+                            error
+                        );
                     } else {
                         console.log(
                             "Asiakkaan vahvistus lähetetty:",
@@ -428,7 +466,9 @@ app.post(
 
         } catch (err) {
             console.error("Webhook processing error:", err);
-            return res.status(500).send("Webhook processing failed");
+            return res.status(500).send(
+                "Webhook processing failed"
+            );
         }
     }
 );
@@ -436,7 +476,7 @@ app.post(
 // Tavallisten pyyntöjen JSON-käsittely
 app.use(express.json());
 
-// API:n testaus
+// API:N TESTAUS
 app.get("/", (req, res) => {
     res.send("Kissakoira API toimii!");
 });
