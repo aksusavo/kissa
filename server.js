@@ -42,12 +42,56 @@ function escapeHtml(value = "") {
     })[char]);
 }
 
-app.use(cors({
-    origin: [
-        "https://kissakoira.xyz",
-        "https://www.kissakoira.xyz"
-    ]
-}));
+// Lähettää maksetun tilauksen Google Sheetsiin.
+async function logOrderToSheets(order) {
+    const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
+    const secret = process.env.GOOGLE_SCRIPT_SECRET;
+
+    if (!scriptUrl || !secret) {
+        throw new Error(
+            "Google Sheets -asetukset puuttuvat Renderistä."
+        );
+    }
+
+    const response = await fetch(scriptUrl, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            secret: secret,
+            ...order
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error(
+            "Google Sheets palautti HTTP-virheen: " +
+            response.status
+        );
+    }
+
+    const result = await response.json();
+
+    if (!result.success) {
+        throw new Error(
+            "Google Sheets -kirjaus epäonnistui: " +
+            (result.error || "Tuntematon virhe")
+        );
+    }
+
+    if (result.duplicate) {
+        console.log(
+            "Tilaus oli jo Google Sheetsissä:",
+            order.orderId
+        );
+    } else {
+        console.log(
+            "Tilaus kirjattu Google Sheetsiin:",
+            order.orderId
+        );
+    }
+}
 
 // STRIPE WEBHOOK
 // Raw body täytyy käsitellä ennen express.json()-käsittelyä.
@@ -93,15 +137,15 @@ app.post(
             const address = shipping?.address || {};
             const customer = session.customer_details || {};
 
-            const name = escapeHtml(
-                shipping?.name || customer.name || "Asiakas"
-            );
+            const rawName =
+                shipping?.name || customer.name || "Asiakas";
+
+            const name = escapeHtml(rawName);
 
             const email = customer.email || "";
 
-            const phone = escapeHtml(
-                customer.phone || "Ei ilmoitettu"
-            );
+            const rawPhone = customer.phone || "Ei ilmoitettu";
+            const phone = escapeHtml(rawPhone);
 
             const street = escapeHtml(address.line1 || "");
             const apartment = escapeHtml(address.line2 || "");
@@ -114,6 +158,38 @@ app.post(
             ).toFixed(2);
 
             const orderId = session.id;
+
+            // Tuotteet yhteen tekstikenttään Google Sheetsia varten.
+            const productsForSheet = lineItems.data.map(item => {
+                const description = item.description || "Tuote";
+                const quantity = item.quantity || 1;
+                return `${description} x ${quantity}`;
+            }).join(", ");
+
+            const addressForSheet = [
+                address.line1,
+                address.line2,
+                [address.postal_code, address.city]
+                    .filter(Boolean)
+                    .join(" "),
+                address.country
+            ].filter(Boolean).join(", ");
+
+            // KIRJATAAN TILAUS GOOGLE SHEETSIIN.
+            // Jos tämä epäonnistuu, Stripe saa HTTP 500 -vastauksen
+            // ja yrittää webhookin käsittelyä myöhemmin uudelleen.
+            await logOrderToSheets({
+                orderId: orderId,
+                createdAt: new Date(
+                    session.created * 1000
+                ).toISOString(),
+                customerName: rawName,
+                email: email,
+                phone: rawPhone,
+                products: productsForSheet,
+                totalCents: session.amount_total || 0,
+                address: addressForSheet
+            });
 
             const orderRows = lineItems.data.map(item => {
                 const description = escapeHtml(
