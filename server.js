@@ -14,7 +14,7 @@ const SENDER = "Kissakoira <tilaukset@kissakoira.xyz>";
 
 const PRODUCTS = {
     paita1: {
-        name: "Testipaita 01",
+        name: "kissakoira. Black/Pink",
         price: 1990,
         image: "https://kissakoira.xyz/photos1/paita1.jpg"
     },
