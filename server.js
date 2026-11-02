@@ -19,7 +19,7 @@ const PRODUCTS = {
         image: "https://kissakoira.xyz/photos1/paita1.jpg"
     },
     paita2: {
-        name: "Testipaita 02",
+        name: "kissakoira. -180",
         price: 1990,
         image: "https://kissakoira.xyz/photos1/paita2.jpg"
     },
