@@ -14,18 +14,18 @@ const SENDER = "Kissakoira <tilaukset@kissakoira.xyz>";
 
 const PRODUCTS = {
     paita1: {
-        name: "kissakoira. Black/Pink",
+        name: "kissakoira.–black/pink",
         price: 1990,
         image: "https://kissakoira.xyz/photos1/paita1.jpg"
     },
     paita2: {
-        name: "kissakoira. -180",
+        name: "kissakoira.–180",
         price: 1990,
         image: "https://kissakoira.xyz/photos1/paita2.jpg"
     },
     paita3: {
-        name: "Testipaita 03",
-        price: 2490,
+        name: "kissakoira.–international",
+        price: 2290,
         image: "https://kissakoira.xyz/photos1/paita3.jpg"
     }
 };
