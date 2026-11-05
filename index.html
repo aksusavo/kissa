@@ -22,7 +22,7 @@
         body {
             font-family: Arial, sans-serif;
             color: #222;
-            background: #fafafa;
+            background: #fffafb;
         }
 
         /* NAVIGAATIO */
@@ -82,7 +82,7 @@
 
         .hero a {
             display: inline-block;
-            background: white;
+            background: #f4c9d8;
             color: #222;
             padding: 14px 28px;
             border-radius: 5px;
@@ -92,7 +92,7 @@
         }
 
         .hero a:hover {
-            background: #ddd;
+            background: #e9afc4;
             transform: translateY(-2px);
         }
 
@@ -124,6 +124,7 @@
 
         .product {
             background: white;
+            border: 1px solid #f3dce5;
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 3px 15px #0000000d;
@@ -141,6 +142,49 @@
             object-fit: cover;
             display: block;
             background: #eee;
+        }
+
+        /* TUOTEKUVAGALLERIA: kaksi kuvaa per tuote */
+        .product-gallery {
+            background: #f8edf1;
+            padding: 10px;
+        }
+
+        .product-main-image {
+            width: 100%;
+            aspect-ratio: 4 / 5;
+            object-fit: cover;
+            display: block;
+            background: #f1e5ea;
+            border-radius: 7px;
+        }
+
+        .product-thumbnails {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .product-thumbnail {
+            border: 2px solid transparent;
+            border-radius: 6px;
+            padding: 0;
+            overflow: hidden;
+            background: white;
+            cursor: pointer;
+            aspect-ratio: 1 / 1;
+        }
+
+        .product-thumbnail.active {
+            border-color: #d98eaa;
+        }
+
+        .product-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
         }
 
         .product-info {
@@ -200,7 +244,7 @@
         }
 
         .buy-button:hover {
-            background: #444;
+            background: #bd718e;
         }
 
         /* OSTOSKORI */
@@ -303,7 +347,7 @@
             display: block;
             width: 100%;
             border: none;
-            background: #2d5be3;
+            background: #d98eaa;
             color: white;
             padding: 16px;
             border-radius: 5px;
@@ -354,7 +398,7 @@
             height: 62px;
             border: none;
             border-radius: 50%;
-            background: #2d5be3;
+            background: #d98eaa;
             color: white;
             font-size: 29px;
             cursor: pointer;
@@ -372,12 +416,13 @@
         .chat-window {
             display: none;
             position: fixed;
+            isolation: isolate;
             right: 24px;
             bottom: 100px;
             width: 370px;
-            height: 510px;
+            height: auto;
             max-width: calc(100vw - 32px);
-            max-height: calc(100dvh - 125px);
+            max-height: min(510px, calc(100dvh - 125px));
             background: white;
             border-radius: 16px;
             box-shadow: 0 5px 30px #0003;
@@ -388,7 +433,7 @@
         }
 
         .chat-header {
-            background: #2d5be3;
+            background: #d98eaa;
             color: white;
             padding: 17px;
             display: flex;
@@ -406,8 +451,9 @@
         }
 
         .messages {
-            flex: 1;
+            flex: 0 1 auto;
             min-height: 0;
+            max-height: 320px;
             padding: 15px;
             overflow-y: auto;
             display: flex;
@@ -422,16 +468,21 @@
             max-width: 85%;
             line-height: 1.5;
             overflow-wrap: anywhere;
-            white-space: pre-wrap;
+            /* Säilytä rivinvaihdot, mutta poista HTML-sisennyksen tyhjät välit. */
+            white-space: pre-line;
         }
 
-        .bot {
+        /* Pakota chatbotin omat viestit vasemmalle tasatuiksi. */
+        #messages .message.bot {
             background: #f0f0f0;
             align-self: flex-start;
+            text-align: left !important;
+            direction: ltr;
+            margin-right: auto;
         }
 
         .user {
-            background: #2d5be3;
+            background: #d98eaa;
             color: white;
             align-self: flex-end;
         }
@@ -457,7 +508,7 @@
 
         .chat-input button {
             border: none;
-            background: #2d5be3;
+            background: #d98eaa;
             color: white;
             border-radius: 8px;
             padding: 0 15px;
@@ -550,19 +601,19 @@
             }
 
             .chat-window {
-                right: 0;
-                bottom: 0;
-                width: 100%;
-                max-width: 100%;
-                height: 100vh;
-                height: 100dvh;
-                max-height: 100dvh;
-                border-radius: 0;
+                right: 12px;
+                bottom: 86px;
+                width: min(370px, calc(100vw - 24px));
+                max-width: calc(100vw - 24px);
+                height: auto;
+                max-height: min(520px, calc(100dvh - 112px));
+                border: 1px solid #f0d8e1;
+                border-radius: 16px;
+                box-shadow: 0 8px 32px #44202d30;
             }
 
             .chat-header {
-                padding: 18px;
-                padding-top: max(18px, env(safe-area-inset-top));
+                padding: 16px;
             }
 
             .chat-input {
@@ -620,8 +671,21 @@
         <div class="products">
 
             <article class="product">
-                <img src="photos1/paita1.jpg"
-                     alt="Kissakoiran testipaita 1">
+                <div class="product-gallery" data-gallery="paita1">
+                    <img class="product-main-image"
+                         src="photos1/paita1.jpg"
+                         alt="Kissakoira-paita">
+                    <div class="product-thumbnails" aria-label="Kissakoira-paita: tuotekuvat">
+                        <button class="product-thumbnail active" type="button"
+                                data-image="photos1/paita1.jpg" aria-label="Näytä kuva 1">
+                            <img src="photos1/paita1.jpg" alt="">
+                        </button>
+                        <button class="product-thumbnail" type="button"
+                                data-image="photos1/paita1-2.jpg" aria-label="Näytä kuva 2">
+                            <img src="photos1/paita1-2.jpg" alt="">
+                        </button>
+                    </div>
+                </div>
 
                 <div class="product-info">
                     <h3>kissakoira.–paita</h3>
@@ -654,8 +718,21 @@
             </article>
 
             <article class="product">
-                <img src="photos1/paita2.jpg"
-                     alt="Kissakoiran testipaita 2">
+                <div class="product-gallery" data-gallery="paita2">
+                    <img class="product-main-image"
+                         src="photos1/paita2.jpg"
+                         alt="Kissakoira 180 -paita">
+                    <div class="product-thumbnails" aria-label="Kissakoira 180 -paita: tuotekuvat">
+                        <button class="product-thumbnail active" type="button"
+                                data-image="photos1/paita2.jpg" aria-label="Näytä kuva 1">
+                            <img src="photos1/paita2.jpg" alt="">
+                        </button>
+                        <button class="product-thumbnail" type="button"
+                                data-image="photos1/paita2-2.jpg" aria-label="Näytä kuva 2">
+                            <img src="photos1/paita2-2.jpg" alt="">
+                        </button>
+                    </div>
+                </div>
 
                 <div class="product-info">
                     <h3>kissakoira.–180</h3>
@@ -688,8 +765,21 @@
             </article>
 
             <article class="product">
-                <img src="photos1/paita3.jpg"
-                     alt="Kissakoiran testipaita 3">
+                <div class="product-gallery" data-gallery="paita3">
+                    <img class="product-main-image"
+                         src="photos1/paita3.jpg"
+                         alt="Kissakoira international -paita">
+                    <div class="product-thumbnails" aria-label="Kissakoira international -paita: tuotekuvat">
+                        <button class="product-thumbnail active" type="button"
+                                data-image="photos1/paita3.jpg" aria-label="Näytä kuva 1">
+                            <img src="photos1/paita3.jpg" alt="">
+                        </button>
+                        <button class="product-thumbnail" type="button"
+                                data-image="photos1/paita3-2.jpg" aria-label="Näytä kuva 2">
+                            <img src="photos1/paita3-2.jpg" alt="">
+                        </button>
+                    </div>
+                </div>
 
                 <div class="product-info">
                     <h3>kissakoira.–international</h3>
@@ -1062,6 +1152,22 @@
 
         // Alusta ostoskori.
         updateCart();
+    </script>
+
+    <!-- TUOTEKUVIEN VAIHTO -->
+    <script>
+        document.querySelectorAll(".product-gallery").forEach((gallery) => {
+            const mainImage = gallery.querySelector(".product-main-image");
+            const thumbnails = gallery.querySelectorAll(".product-thumbnail");
+
+            thumbnails.forEach((thumbnail) => {
+                thumbnail.addEventListener("click", () => {
+                    mainImage.src = thumbnail.dataset.image;
+                    thumbnails.forEach((item) => item.classList.remove("active"));
+                    thumbnail.classList.add("active");
+                });
+            });
+        });
     </script>
 
     <!-- CHATBOT -->
