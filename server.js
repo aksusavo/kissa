@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const Stripe = require("stripe");
 const { Resend } = require("resend");
+const crypto = require("crypto");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -30,7 +31,29 @@ const PRODUCTS = {
     }
 };
 
-const SIZES = ["S", "M", "L"];
+// PRINTFULIN STORE-VARIANTIT
+const PRINTFUL_VARIANTS = {
+    paita1: {
+        S: 5629815261,
+        M: 5629815262,
+        L: 5629815263,
+        XL: 5629815264
+    },
+    paita2: {
+        S: 5629811080,
+        M: 5629811081,
+        L: 5629811082,
+        XL: 5629811083
+    },
+    paita3: {
+        S: 5629807785,
+        M: 5629807786,
+        L: 5629807787,
+        XL: 5629807788
+    }
+};
+
+const SIZES = ["S", "M", "L", "XL"];
 
 // CORS-ASETUKSET
 const allowedOrigins = [
@@ -118,6 +141,153 @@ async function logOrderToSheets(order) {
     }
 }
 
+
+// PRINTFUL-TILAUKSEN LUONTI
+async function createPrintfulOrder({
+    stripeSessionId,
+    lineItems,
+    rawName,
+    email,
+    rawPhone,
+    address
+}) {
+    const token = process.env.PRINTFUL_API_TOKEN;
+
+    if (!token) {
+        throw new Error("PRINTFUL_API_TOKEN puuttuu.");
+    }
+
+    // Luodaan Stripe-istunnosta yksilöllinen ulkoinen tunniste.
+    const externalId = "KK_" + crypto
+        .createHash("sha256")
+        .update(stripeSessionId)
+        .digest("hex")
+        .slice(0, 24);
+
+    const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+    };
+
+    // Tarkistetaan, onko tilaus jo olemassa.
+    const existingResponse = await fetch(
+        `https://api.printful.com/orders/@${externalId}`,
+        { method: "GET", headers }
+    );
+
+    if (existingResponse.ok) {
+        const existingData = await existingResponse.json();
+
+        console.log(
+            "Printful-tilaus löytyi jo:",
+            existingData.result?.id
+        );
+
+        return existingData.result;
+    }
+
+    if (existingResponse.status !== 404) {
+        const errorText = await existingResponse.text();
+
+        throw new Error(
+            `Printful-tarkistus epäonnistui: ${errorText}`
+        );
+    }
+
+    // Muutetaan Stripen tuotteet Printfulin tuotteiksi.
+    const items = lineItems.map(item => {
+        const product = item.price?.product;
+
+        const metadata =
+            typeof product === "object"
+                ? product.metadata || {}
+                : {};
+
+        const productId = metadata.productId;
+        const size = metadata.size;
+
+        const syncVariantId =
+            PRINTFUL_VARIANTS[productId]?.[size];
+
+        const quantity = item.quantity || 1;
+
+        if (!syncVariantId) {
+            throw new Error(
+                `Tuntematon Printful-tuote tai koko: ${productId}, ${size}`
+            );
+        }
+
+        if (!Number.isInteger(quantity) || quantity < 1) {
+            throw new Error("Virheellinen tuotemäärä.");
+        }
+
+        return {
+            sync_variant_id: syncVariantId,
+            quantity
+        };
+    });
+
+    // Asiakkaan toimitustiedot.
+    const recipient = {
+        name: rawName,
+        address1: address.line1 || "",
+        city: address.city || "",
+        country_code: (address.country || "").toUpperCase(),
+        zip: address.postal_code || "",
+        email: email || undefined,
+        phone: rawPhone !== "Ei ilmoitettu"
+            ? rawPhone
+            : undefined
+    };
+
+    if (address.line2) {
+        recipient.address2 = address.line2;
+    }
+
+    if (
+        !recipient.name ||
+        !recipient.address1 ||
+        !recipient.city ||
+        !recipient.country_code ||
+        !recipient.zip
+    ) {
+        throw new Error(
+            "Toimitusosoitteesta puuttuu tietoja."
+        );
+    }
+
+    // Luodaan Printful-tilaus luonnoksena.
+    const response = await fetch(
+        "https://api.printful.com/orders?confirm=0",
+        {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+                external_id: externalId,
+                recipient,
+                items
+            })
+        }
+    );
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok || result.code !== 200) {
+        throw new Error(
+            "Printful-tilauksen luonti epäonnistui: " +
+            JSON.stringify(result)
+        );
+    }
+
+    console.log(
+        "Printful-tilaus luotu luonnoksena:",
+        result.result?.id
+    );
+
+    return result.result;
+}
+
+
 // STRIPE WEBHOOK
 // Raw body täytyy käsitellä ennen express.json()-käsittelyä.
 app.post(
@@ -154,10 +324,13 @@ app.post(
         try {
             // Haetaan kaikki tilauksen tuoterivit Stripestä.
             const lineItems =
-                await stripe.checkout.sessions.listLineItems(
-                    session.id,
-                    { limit: 100 }
-                );
+             await stripe.checkout.sessions.listLineItems(
+             session.id,
+        {
+            limit: 100,
+            expand: ["data.price.product"]
+        }
+    );
 
             const shipping =
                 session.collected_information?.shipping_details ||
@@ -198,6 +371,15 @@ app.post(
 
                 return `${description} x ${quantity}`;
             }).join(", ");
+			// PRINTFUL-TILAUKSEN LUONTI
+await createPrintfulOrder({
+    stripeSessionId: session.id,
+    lineItems: lineItems.data,
+    rawName,
+    email,
+    rawPhone,
+    address
+});
 
             const addressForSheet = [
                 address.line1,
