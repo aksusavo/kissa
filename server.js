@@ -59,6 +59,7 @@ const SIZES = ["S", "M", "L", "XL"];
 const allowedOrigins = [
     "https://kissakoira.xyz",
     "https://www.kissakoira.xyz"
+	"https://kissa-static.onrender.com/"
 ];
 
 const corsOptions = {
@@ -83,12 +84,12 @@ app.options(/.*/, cors(corsOptions));
 
 function escapeHtml(value = "") {
     return String(value).replace(/[&<>"']/g, char => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-    })[char]);
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        })[char]);
 }
 
 // GOOGLE SHEETS -TILAUSKIRJAUS
@@ -98,8 +99,7 @@ async function logOrderToSheets(order) {
 
     if (!scriptUrl || !secret) {
         throw new Error(
-            "Google Sheets -asetukset puuttuvat Renderistä."
-        );
+            "Google Sheets -asetukset puuttuvat Renderistä.");
     }
 
     const response = await fetch(scriptUrl, {
@@ -115,8 +115,7 @@ async function logOrderToSheets(order) {
 
     if (!response.ok) {
         throw new Error(
-            "Google Sheets HTTP-virhe: " + response.status
-        );
+            "Google Sheets HTTP-virhe: " + response.status);
     }
 
     const result = await response.json();
@@ -124,23 +123,19 @@ async function logOrderToSheets(order) {
     if (!result.success) {
         throw new Error(
             "Google Sheets -kirjaus epäonnistui: " +
-            (result.error || "Tuntematon virhe")
-        );
+            (result.error || "Tuntematon virhe"));
     }
 
     if (result.duplicate) {
         console.log(
             "Tilaus oli jo Google Sheetsissä:",
-            order.orderId
-        );
+            order.orderId);
     } else {
         console.log(
             "Tilaus kirjattu Google Sheetsiin:",
-            order.orderId
-        );
+            order.orderId);
     }
 }
-
 
 // PRINTFUL-TILAUKSEN LUONTI
 async function createPrintfulOrder({
@@ -171,17 +166,17 @@ async function createPrintfulOrder({
 
     // Tarkistetaan, onko tilaus jo olemassa.
     const existingResponse = await fetch(
-        `https://api.printful.com/orders/@${externalId}`,
-        { method: "GET", headers }
-    );
+`https://api.printful.com/orders/@${externalId}`, {
+            method: "GET",
+            headers
+        });
 
     if (existingResponse.ok) {
         const existingData = await existingResponse.json();
 
         console.log(
             "Printful-tilaus löytyi jo:",
-            existingData.result?.id
-        );
+            existingData.result?.id);
 
         return existingData.result;
     }
@@ -190,8 +185,7 @@ async function createPrintfulOrder({
         const errorText = await existingResponse.text();
 
         throw new Error(
-            `Printful-tarkistus epäonnistui: ${errorText}`
-        );
+`Printful-tarkistus epäonnistui: ${errorText}`);
     }
 
     // Muutetaan Stripen tuotteet Printfulin tuotteiksi.
@@ -200,8 +194,8 @@ async function createPrintfulOrder({
 
         const metadata =
             typeof product === "object"
-                ? product.metadata || {}
-                : {};
+             ? product.metadata || {}
+         : {};
 
         const productId = metadata.productId;
         const size = metadata.size;
@@ -213,8 +207,7 @@ async function createPrintfulOrder({
 
         if (!syncVariantId) {
             throw new Error(
-                `Tuntematon Printful-tuote tai koko: ${productId}, ${size}`
-            );
+`Tuntematon Printful-tuote tai koko: ${productId}, ${size}`);
         }
 
         if (!Number.isInteger(quantity) || quantity < 1) {
@@ -236,8 +229,8 @@ async function createPrintfulOrder({
         zip: address.postal_code || "",
         email: email || undefined,
         phone: rawPhone !== "Ei ilmoitettu"
-            ? rawPhone
-            : undefined
+         ? rawPhone
+         : undefined
     };
 
     if (address.line2) {
@@ -249,17 +242,14 @@ async function createPrintfulOrder({
         !recipient.address1 ||
         !recipient.city ||
         !recipient.country_code ||
-        !recipient.zip
-    ) {
+        !recipient.zip) {
         throw new Error(
-            "Toimitusosoitteesta puuttuu tietoja."
-        );
+            "Toimitusosoitteesta puuttuu tietoja.");
     }
 
     // Luodaan Printful-tilaus luonnoksena.
     const response = await fetch(
-        "https://api.printful.com/orders?confirm=0",
-        {
+            "https://api.printful.com/orders?confirm=0", {
             method: "POST",
             headers,
             body: JSON.stringify({
@@ -267,157 +257,151 @@ async function createPrintfulOrder({
                 recipient,
                 items
             })
-        }
-    );
+        });
 
     const result = await response.json().catch(() => ({}));
 
     if (!response.ok || result.code !== 200) {
         throw new Error(
             "Printful-tilauksen luonti epäonnistui: " +
-            JSON.stringify(result)
-        );
+            JSON.stringify(result));
     }
 
     console.log(
         "Printful-tilaus luotu luonnoksena:",
-        result.result?.id
-    );
+        result.result?.id);
 
     return result.result;
 }
-
 
 // STRIPE WEBHOOK
 // Raw body täytyy käsitellä ennen express.json()-käsittelyä.
 app.post(
     "/api/webhook",
-    express.raw({ type: "application/json" }),
-    async (req, res) => {
-        const signature = req.headers["stripe-signature"];
-        let event;
+    express.raw({
+        type: "application/json"
+    }),
+    async(req, res) => {
+    const signature = req.headers["stripe-signature"];
+    let event;
 
-        try {
-            event = stripe.webhooks.constructEvent(
+    try {
+        event = stripe.webhooks.constructEvent(
                 req.body,
                 signature,
-                process.env.STRIPE_WEBHOOK_SECRET.trim()
-            );
-        } catch (err) {
-            console.error(
-                "Webhook signature error:",
-                err.message
-            );
-            return res.status(400).send("Webhook error");
-        }
+                process.env.STRIPE_WEBHOOK_SECRET.trim());
+    } catch (err) {
+        console.error(
+            "Webhook signature error:",
+            err.message);
+        return res.status(400).send("Webhook error");
+    }
 
-        if (event.type !== "checkout.session.completed") {
-            return res.json({ received: true });
-        }
+    if (event.type !== "checkout.session.completed") {
+        return res.json({
+            received: true
+        });
+    }
 
-        const session = event.data.object;
+    const session = event.data.object;
 
-        if (session.payment_status !== "paid") {
-            return res.json({ received: true });
-        }
+    if (session.payment_status !== "paid") {
+        return res.json({
+            received: true
+        });
+    }
 
-        try {
-            // Haetaan kaikki tilauksen tuoterivit Stripestä.
-            const lineItems =
-             await stripe.checkout.sessions.listLineItems(
-             session.id,
-        {
-            limit: 100,
-            expand: ["data.price.product"]
-        }
-    );
-
-            const shipping =
-                session.collected_information?.shipping_details ||
-                session.shipping_details;
-
-            const address = shipping?.address || {};
-            const customer = session.customer_details || {};
-
-            const rawName =
-                shipping?.name || customer.name || "Asiakas";
-
-            const name = escapeHtml(rawName);
-            const email = customer.email || "";
-
-            const rawPhone =
-                customer.phone || "Ei ilmoitettu";
-
-            const phone = escapeHtml(rawPhone);
-
-            const street = escapeHtml(address.line1 || "");
-            const apartment = escapeHtml(address.line2 || "");
-            const postal = escapeHtml(address.postal_code || "");
-            const city = escapeHtml(address.city || "");
-            const country = escapeHtml(address.country || "");
-
-            const amount = (
-                (session.amount_total || 0) / 100
-            ).toFixed(2);
-
-            const orderId = session.id;
-
-            // Tuotteet Google Sheetsiin.
-            const productsForSheet = lineItems.data.map(item => {
-                const description =
-                    item.description || "Tuote";
-
-                const quantity = item.quantity || 1;
-
-                return `${description} x ${quantity}`;
-            }).join(", ");
-			// PRINTFUL-TILAUKSEN LUONTI
-await createPrintfulOrder({
-    stripeSessionId: session.id,
-    lineItems: lineItems.data,
-    rawName,
-    email,
-    rawPhone,
-    address
-});
-
-            const addressForSheet = [
-                address.line1,
-                address.line2,
-                [
-                    address.postal_code,
-                    address.city
-                ].filter(Boolean).join(" "),
-                address.country
-            ].filter(Boolean).join(", ");
-
-            // KIRJATAAN TILAUS GOOGLE SHEETSIIN.
-            await logOrderToSheets({
-                orderId: orderId,
-                createdAt: new Date(
-                    session.created * 1000
-                ).toISOString(),
-                customerName: rawName,
-                email: email,
-                phone: rawPhone,
-                products: productsForSheet,
-                totalCents: session.amount_total || 0,
-                address: addressForSheet
+    try {
+        // Haetaan kaikki tilauksen tuoterivit Stripestä.
+        const lineItems =
+            await stripe.checkout.sessions.listLineItems(
+                session.id, {
+                limit: 100,
+                expand: ["data.price.product"]
             });
 
-            // SÄHKÖPOSTIN TUOTERIVIT
-            const orderRows = lineItems.data.map(item => {
-                const description = escapeHtml(
-                    item.description || "Tuote"
-                );
+        const shipping =
+            session.collected_information?.shipping_details ||
+            session.shipping_details;
 
-                const quantity = item.quantity || 1;
+        const address = shipping?.address || {};
+        const customer = session.customer_details || {};
 
-                const rowTotal = (
-                    (item.amount_total || 0) / 100
-                ).toFixed(2);
+        const rawName =
+            shipping?.name || customer.name || "Asiakas";
 
-                return `
+        const name = escapeHtml(rawName);
+        const email = customer.email || "";
+
+        const rawPhone =
+            customer.phone || "Ei ilmoitettu";
+
+        const phone = escapeHtml(rawPhone);
+
+        const street = escapeHtml(address.line1 || "");
+        const apartment = escapeHtml(address.line2 || "");
+        const postal = escapeHtml(address.postal_code || "");
+        const city = escapeHtml(address.city || "");
+        const country = escapeHtml(address.country || "");
+
+        const amount = (
+            (session.amount_total || 0) / 100).toFixed(2);
+
+        const orderId = session.id;
+
+        // Tuotteet Google Sheetsiin.
+        const productsForSheet = lineItems.data.map(item => {
+            const description =
+                item.description || "Tuote";
+
+            const quantity = item.quantity || 1;
+
+            return `${description} x ${quantity}`;
+        }).join(", ");
+        // PRINTFUL-TILAUKSEN LUONTI
+        await createPrintfulOrder({
+            stripeSessionId: session.id,
+            lineItems: lineItems.data,
+            rawName,
+            email,
+            rawPhone,
+            address
+        });
+
+        const addressForSheet = [
+            address.line1,
+            address.line2,
+            [
+                address.postal_code,
+                address.city
+            ].filter(Boolean).join(" "),
+            address.country
+        ].filter(Boolean).join(", ");
+
+        // KIRJATAAN TILAUS GOOGLE SHEETSIIN.
+        await logOrderToSheets({
+            orderId: orderId,
+            createdAt: new Date(
+                session.created * 1000).toISOString(),
+            customerName: rawName,
+            email: email,
+            phone: rawPhone,
+            products: productsForSheet,
+            totalCents: session.amount_total || 0,
+            address: addressForSheet
+        });
+
+        // SÄHKÖPOSTIN TUOTERIVIT
+        const orderRows = lineItems.data.map(item => {
+            const description = escapeHtml(
+                    item.description || "Tuote");
+
+            const quantity = item.quantity || 1;
+
+            const rowTotal = (
+                (item.amount_total || 0) / 100).toFixed(2);
+
+            return `
                     <tr>
                         <td style="padding: 8px; border-bottom: 1px solid #ddd;">
                             ${description}
@@ -430,9 +414,9 @@ await createPrintfulOrder({
                         </td>
                     </tr>
                 `;
-            }).join("");
+        }).join("");
 
-            const orderTable = `
+        const orderTable = `
                 <table style="
                     width: 100%;
                     border-collapse: collapse;
@@ -457,21 +441,21 @@ await createPrintfulOrder({
                 </table>
             `;
 
-            const addressHtml = `
+        const addressHtml = `
                 ${street}<br>
                 ${apartment ? apartment + "<br>" : ""}
                 ${postal} ${city}<br>
                 ${country}
             `;
 
-            console.log("MAKSU ONNISTUI!");
-            console.log("Tilaustunnus:", orderId);
-            console.log("Tuoterivit:", lineItems.data.length);
-            console.log("Sähköposti:", email);
-            console.log("Toimitusosoite:", address);
+        console.log("MAKSU ONNISTUI!");
+        console.log("Tilaustunnus:", orderId);
+        console.log("Tuoterivit:", lineItems.data.length);
+        console.log("Sähköposti:", email);
+        console.log("Toimitusosoite:", address);
 
-            // ILMOITUS YLLÄPITÄJÄLLE
-            const adminHtml = `
+        // ILMOITUS YLLÄPITÄJÄLLE
+        const adminHtml = `
                 <h2>Uusi tilaus! 🎉</h2>
 
                 <p>
@@ -500,37 +484,32 @@ await createPrintfulOrder({
                 <p>${addressHtml}</p>
             `;
 
-            try {
-                const { data, error } = await resend.emails.send(
-                    {
-                        from: SENDER,
-                        to: [process.env.NOTIFICATION_EMAIL],
-                        subject: "Uusi tilaus Kissakoira-kaupasta!",
-                        html: adminHtml
-                    },
-                    {
-                        idempotencyKey: `admin-order-${orderId}`
-                    }
-                );
+        try {
+            const { data, error } = await resend.emails.send({
+                from: SENDER,
+                to: [process.env.NOTIFICATION_EMAIL],
+                subject: "Uusi tilaus Kissakoira-kaupasta!",
+                html: adminHtml
+            }, {
+                idempotencyKey: `admin-order-${orderId}`
+            });
 
-                if (error) {
-                    console.error("Admin email error:", error);
-                } else {
-                    console.log(
-                        "Ylläpitäjän sähköposti lähetetty:",
-                        data.id
-                    );
-                }
-            } catch (err) {
-                console.error(
-                    "Admin email error:",
-                    err.message
-                );
+            if (error) {
+                console.error("Admin email error:", error);
+            } else {
+                console.log(
+                    "Ylläpitäjän sähköposti lähetetty:",
+                    data.id);
             }
+        } catch (err) {
+            console.error(
+                "Admin email error:",
+                err.message);
+        }
 
-            // VAHVISTUS ASIAKKAALLE
-            if (email) {
-                const customerHtml = `
+        // VAHVISTUS ASIAKKAALLE
+        if (email) {
+            const customerHtml = `
                     <div style="
                         max-width: 600px;
                         margin: auto;
@@ -612,48 +591,42 @@ await createPrintfulOrder({
                     </div>
                 `;
 
-                try {
-                    const { data, error } = await resend.emails.send(
-                        {
-                            from: SENDER,
-                            to: [email],
-                            subject: "Kiitos tilauksestasi! ❤️",
-                            html: customerHtml
-                        },
-                        {
-                            idempotencyKey: `customer-order-${orderId}`
-                        }
-                    );
+            try {
+                const { data, error } = await resend.emails.send({
+                    from: SENDER,
+                    to: [email],
+                    subject: "Kiitos tilauksestasi! ❤️",
+                    html: customerHtml
+                }, {
+                    idempotencyKey: `customer-order-${orderId}`
+                });
 
-                    if (error) {
-                        console.error(
-                            "Customer email error:",
-                            error
-                        );
-                    } else {
-                        console.log(
-                            "Asiakkaan vahvistus lähetetty:",
-                            data.id
-                        );
-                    }
-                } catch (err) {
+                if (error) {
                     console.error(
                         "Customer email error:",
-                        err.message
-                    );
+                        error);
+                } else {
+                    console.log(
+                        "Asiakkaan vahvistus lähetetty:",
+                        data.id);
                 }
+            } catch (err) {
+                console.error(
+                    "Customer email error:",
+                    err.message);
             }
-
-            return res.json({ received: true });
-
-        } catch (err) {
-            console.error("Webhook processing error:", err);
-            return res.status(500).send(
-                "Webhook processing failed"
-            );
         }
+
+        return res.json({
+            received: true
+        });
+
+    } catch (err) {
+        console.error("Webhook processing error:", err);
+        return res.status(500).send(
+            "Webhook processing failed");
     }
-);
+});
 
 // Tavallisten pyyntöjen JSON-käsittely
 app.use(express.json());
@@ -673,28 +646,26 @@ app.get("/api/test", (req, res) => {
 // TUOTTEIDEN LISTAUS
 app.get("/api/products", (req, res) => {
     const products = Object.entries(PRODUCTS).map(
-        ([id, product]) => ({
-            id,
-            name: product.name,
-            price: product.price,
-            image: product.image,
-            sizes: SIZES
-        })
-    );
+            ([id, product]) => ({
+                id,
+                name: product.name,
+                price: product.price,
+                image: product.image,
+                sizes: SIZES
+            }));
 
     res.json(products);
 });
 
 // MAKSUSESSION LUOMINEN OSTOSKORISTA
-app.post("/api/create-checkout-session", async (req, res) => {
+app.post("/api/create-checkout-session", async(req, res) => {
     try {
         const items = req.body.items;
 
         if (
             !Array.isArray(items) ||
             items.length === 0 ||
-            items.length > 30
-        ) {
+            items.length > 30) {
             return res.status(400).json({
                 error: "Ostoskori on tyhjä tai virheellinen."
             });
@@ -715,15 +686,14 @@ app.post("/api/create-checkout-session", async (req, res) => {
 
             if (!SIZES.includes(size)) {
                 return res.status(400).json({
-                    error: "Valitse tuotteelle koko S, M tai L."
+                    error: "Valitse tuotteelle koko S, M, L tai XL."
                 });
             }
 
             if (
                 !Number.isInteger(quantity) ||
                 quantity < 1 ||
-                quantity > 10
-            ) {
+                quantity > 10) {
                 return res.status(400).json({
                     error: "Tuotteen määrä ei ole kelvollinen."
                 });
@@ -764,10 +734,10 @@ app.post("/api/create-checkout-session", async (req, res) => {
             line_items: lineItems,
 
             success_url:
-                "https://kissakoira.xyz/maksu-onnistui.html",
+            "https://kissakoira.xyz/maksu-onnistui.html",
 
             cancel_url:
-                "https://kissakoira.xyz/?payment=cancel"
+            "https://kissakoira.xyz/?payment=cancel"
         });
 
         res.json({
