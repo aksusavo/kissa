@@ -59,7 +59,7 @@ const SIZES = ["S", "M", "L", "XL"];
 const allowedOrigins = [
     "https://kissakoira.xyz",
     "https://www.kissakoira.xyz",
-	"https://kissa-static.onrender.com/"
+	"https://kissa-static.onrender.com"
 ];
 
 const corsOptions = {
